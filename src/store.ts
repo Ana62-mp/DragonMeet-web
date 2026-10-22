@@ -33,11 +33,11 @@ export type Invite = {
     cancelled: boolean;
 };
 export const users: User[] = [
-    { id: 'ana', name: 'Ana', email: 'ana@estudiantes.usfq.edu.ec', major: 'Ciencias de la Computación', color: '#E11B22', initials: 'AN' },
-    { id: 'vale', name: 'Vale', email: 'vale@estudiantes.usfq.edu.ec', major: 'Ciencias de la Computación', color: '#8B5CF6', initials: 'VA' },
-    { id: 'paulo', name: 'Paulo', email: 'paulo@estudiantes.usfq.edu.ec', major: 'Ciencias de la Computación', color: '#3B82F6', initials: 'PA' },
-    { id: 'sofia', name: 'Sofía', email: 'sofia@estudiantes.usfq.edu.ec', major: 'Arquitectura', color: '#EC4899', initials: 'SO' },
-    { id: 'diego', name: 'Diego', email: 'diego@estudiantes.usfq.edu.ec', major: 'Administración', color: '#F97316', initials: 'DI' }
+    { id: 'ana', name: 'Ana', email: 'ana@estud.usfq.edu.ec', major: 'Ciencias de la Computación', color: '#E11B22', initials: 'AN' },
+    { id: 'vale', name: 'Vale', email: 'vale@estud.usfq.edu.ec', major: 'Ciencias de la Computación', color: '#8B5CF6', initials: 'VA' },
+    { id: 'paulo', name: 'Paulo', email: 'paulo@estud.usfq.edu.ec', major: 'Ciencias de la Computación', color: '#3B82F6', initials: 'PA' },
+    { id: 'sofia', name: 'Sofía', email: 'sofia@estud.usfq.edu.ec', major: 'Arquitectura', color: '#EC4899', initials: 'SO' },
+    { id: 'diego', name: 'Diego', email: 'diego@estud.usfq.edu.ec', major: 'Administración', color: '#F97316', initials: 'DI' }
 ];
 export const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 export const zones = ['Student Union', 'Da Vinci', 'Newton', 'Einstein', 'Galileo', 'Hall', 'Biblioteca', 'Cuadrángulo', 'Plaza Maxwell'];
