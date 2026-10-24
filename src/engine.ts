@@ -1,4 +1,4 @@
-import type { Entry } from './store';
+import type { Entry } from './types';
 import { DAY_END_MIN, DAY_START_MIN, fromMinutes, overlaps, toMinutes } from './domain/time.ts';
 
 export type Availability = {
@@ -13,7 +13,7 @@ export type Availability = {
  * Time intervals are half-open so consecutive classes do not conflict.
  * The caller must authorize each participant before invoking this function.
  */
-export function calculate(entries: Entry[], participants: string[]): Availability[] {
+export function calculate(entries: Pick<Entry, 'user' | 'day' | 'start' | 'end'>[], participants: string[]): Availability[] {
   if (participants.length < 1 || participants.length > 5) return [];
   const blocks: Availability[] = [];
   for (let day = 0; day < 5; day++) {

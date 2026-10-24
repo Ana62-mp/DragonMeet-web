@@ -4,7 +4,8 @@ import { CLASS_BUILDINGS } from '../data/campus.ts';
 import { DEMO_IMPORT_ROWS, type ImportRow } from '../data/demoImport.ts';
 import { validateSlots } from '../domain/schedule.ts';
 import { formatMinutes, fromMinutes, parseTime } from '../domain/time.ts';
-import { days, type Entry } from '../store';
+import { days } from '../store';
+import type { Entry } from '../types';
 
 type Step = 'pick' | 'simulating' | 'review';
 type Props = { userId: string; existing: Entry[]; onConfirm: (entries: Entry[]) => void; onClose: () => void };

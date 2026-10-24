@@ -1,5 +1,6 @@
 import { CAMPUS_ZONES, zoneLabel } from '../data/campus.ts';
-import { users } from '../store';
+import type { Person } from '../types';
+import { initialsOf } from './Avatar';
 
 /** Illustrative, hand-drawn layout inspired by the campus plan. Not georeferenced and not official. */
 type Shape = { d: string; cx: number; cy: number; kind: 'building' | 'open' | 'green' };
@@ -42,13 +43,12 @@ const GARDENS = [ellipse(172, 244, 22, 14), ellipse(470, 150, 32, 14), ellipse(5
 const PATHS =
   'M140 130 C200 160 300 150 410 140 M272 126 L275 181 M275 249 C270 270 240 290 215 272 M130 240 C160 300 120 340 130 385 M440 207 L472 217 M568 217 C600 230 600 235 600 235 M275 249 C330 290 360 300 400 330 M402 365 C402 380 410 395 430 402 M545 343 C520 370 500 390 480 405 M586 312 C600 290 600 260 600 235 M600 235 L706 235';
 
-type Marker = { id: string; initials: string; color: string };
 type Props = {
   active: string;
   /** Zone the signed-in student has confirmed as their own, if any. */
   selfZone: string | null;
   /** Only friends already authorized to be seen. */
-  friendsByZone: Record<string, string[]>;
+  friendsByZone: Record<string, Person[]>;
   onSelect: (zoneId: string) => void;
 };
 
@@ -59,39 +59,30 @@ function Label({ text, x, y }: { text: string; x: number; y: number }) {
   return (
     <text className="zone-label" x={x} y={y - (words.length - 1) * 8} textAnchor="middle">
       {words.map((w, i) => (
-        <tspan key={w} x={x} dy={i === 0 ? 0 : 16}>
-          {w}
-        </tspan>
+        <tspan key={w} x={x} dy={i === 0 ? 0 : 16}>{w}</tspan>
       ))}
     </text>
   );
 }
 
 export function CampusSvgMap({ active, selfZone, friendsByZone, onSelect }: Props) {
-  const markersFor = (zone: string): Marker[] =>
-    (friendsByZone[zone] ?? []).flatMap(id => users.filter(u => u.id === id).map(({ initials, color }) => ({ id, initials, color })));
-
   return (
     <svg viewBox="0 0 900 560" role="group" aria-label="Mapa ilustrativo del campus Cumbayá" className="campus-map">
       <rect width="900" height="560" rx="24" fill="#f4f6f4" />
       {/* ravine crossed by the bridge towards Complejo Hayek */}
       <path d="M612 0 C640 120 600 200 640 280 C676 350 640 460 668 560 H700 C676 460 710 350 676 280 C640 200 676 110 644 0 Z" fill="#dbe8f1" />
-      {GARDENS.map(d => (
-        <path key={d} d={d} fill="#dcebd2" />
-      ))}
+      {GARDENS.map(d => <path key={d} d={d} fill="#dcebd2" />)}
       <path d={PATHS} stroke="#e1e6ea" strokeWidth="15" fill="none" strokeLinecap="round" />
       <path d={PATHS} stroke="#fff" strokeWidth="9" fill="none" strokeLinecap="round" />
       {SILHOUETTES.map(b => (
         <g key={b.label} aria-hidden="true">
           <path d={b.d} fill="#eceff2" stroke="#d5dbe1" strokeWidth="1.5" strokeLinejoin="round" />
-          <text className="silhouette-label" x={b.cx} y={b.cy + 4} textAnchor="middle">
-            {b.label}
-          </text>
+          <text className="silhouette-label" x={b.cx} y={b.cy + 4} textAnchor="middle">{b.label}</text>
         </g>
       ))}
       {CAMPUS_ZONES.map(zone => {
         const shape = ZONE_SHAPES[zone.id];
-        const here = markersFor(zone.id);
+        const here = friendsByZone[zone.id] ?? [];
         const selected = zone.id === active;
         return (
           <g
@@ -111,12 +102,10 @@ export function CampusSvgMap({ active, selfZone, friendsByZone, onSelect }: Prop
           >
             <path className="zone-shape" d={shape.d} strokeLinejoin="round" />
             <Label text={zone.label} x={shape.cx} y={shape.cy - 4} />
-            {here.slice(0, MAX_MARKERS).map((m, i, shown) => (
-              <g key={m.id} transform={`translate(${shape.cx + (i - (shown.length - 1) / 2) * 24} ${shape.cy + 20})`}>
-                <circle r="10" fill={m.color} stroke="#fff" strokeWidth="2" />
-                <text className="marker-text" textAnchor="middle" dy="3.5">
-                  {m.initials}
-                </text>
+            {here.slice(0, MAX_MARKERS).map((person, i, shown) => (
+              <g key={person.id} transform={`translate(${shape.cx + (i - (shown.length - 1) / 2) * 24} ${shape.cy + 20})`}>
+                <circle r="10" fill={person.color} stroke="#fff" strokeWidth="2" />
+                <text className="marker-text" textAnchor="middle" dy="3.5">{initialsOf(person)}</text>
               </g>
             ))}
             {selfZone === zone.id && (
@@ -131,9 +120,7 @@ export function CampusSvgMap({ active, selfZone, friendsByZone, onSelect }: Prop
       <g aria-hidden="true">
         <rect x="592" y="224" width="120" height="24" rx="4" fill="#fff" stroke="#c9d1d8" strokeWidth="1.5" />
         <path d="M592 228 H712 M592 244 H712" stroke="#c9d1d8" strokeWidth="1.5" />
-        <text className="silhouette-label" x="652" y="268" textAnchor="middle">
-          Puente
-        </text>
+        <text className="silhouette-label" x="652" y="268" textAnchor="middle">Puente</text>
       </g>
     </svg>
   );

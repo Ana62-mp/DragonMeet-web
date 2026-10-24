@@ -1,32 +1,41 @@
-import { canViewLocation, canViewSchedule, getVisibleZone, hasClassAt, type SocialState } from './permissions.ts';
+import { PRESENCE_TTL_MS } from '../data/campus.ts';
+import type { Access, Entry, Presence } from '../types';
+import { hasClassAt } from './visibility.ts';
 
 export type AvailableFriend = { id: string; zone: string };
 
-/** Authorized friends who reported being on campus (fresh report) and have no class at this minute.
+export const isPresenceFresh = (presence: Presence | undefined, nowTs: number): presence is Presence =>
+  presence !== undefined && nowTs - presence.updatedAt < PRESENCE_TTL_MS;
+
+type Inputs = {
+  friendIds: string[];
+  access: Record<string, Access | undefined>;
+  zones: Record<string, Presence | undefined>;
+  /** Classes the server lets the viewer see (own data is irrelevant here). */
+  entries: Pick<Entry, 'user' | 'day' | 'start' | 'end'>[];
+  clock: { day: number; minutes: number };
+  nowTs: number;
+};
+
+/** Friends the viewer may see (schedule AND location), with a fresh campus report and no class at this minute.
  * "No class" is not a promise of free time. Missing data never counts as available.
  */
-export function getFriendsOnCampusNow(
-  s: SocialState,
-  viewer: string,
-  everyone: string[],
-  clock: { day: number; minutes: number },
-  nowTs: number,
-): AvailableFriend[] {
+export function getFriendsOnCampusNow({ friendIds, access, zones, entries, clock, nowTs }: Inputs): AvailableFriend[] {
   if (clock.day < 0) return [];
-  return everyone.flatMap(id => {
-    if (id === viewer || !canViewSchedule(s, viewer, id) || !canViewLocation(s, viewer, id, nowTs)) return [];
-    if (hasClassAt(s.entries, id, clock.day, clock.minutes)) return [];
-    const zone = getVisibleZone(s, viewer, id, nowTs);
-    return zone ? [{ id, zone }] : [];
+  return friendIds.flatMap(id => {
+    const presence = zones[id];
+    const allowed = access[id]?.schedule && access[id]?.location;
+    if (!allowed || !isPresenceFresh(presence, nowTs) || hasClassAt(entries, id, clock.day, clock.minutes)) return [];
+    return [{ id, zone: presence.zone }];
   });
 }
 
-/** Zones where authorized friends are currently visible, keyed by zone id. */
-export function getVisibleFriendsByZone(s: SocialState, viewer: string, everyone: string[], nowTs: number): Record<string, string[]> {
+/** Zones where friends are currently visible, keyed by zone id. */
+export function groupFriendsByZone(friendIds: string[], access: Inputs['access'], zones: Inputs['zones'], nowTs: number): Record<string, string[]> {
   const byZone: Record<string, string[]> = {};
-  for (const id of everyone) {
-    const zone = id === viewer ? null : getVisibleZone(s, viewer, id, nowTs);
-    if (zone) byZone[zone] = [...(byZone[zone] ?? []), id];
+  for (const id of friendIds) {
+    const presence = zones[id];
+    if (access[id]?.location && isPresenceFresh(presence, nowTs)) byZone[presence.zone] = [...(byZone[presence.zone] ?? []), id];
   }
   return byZone;
 }

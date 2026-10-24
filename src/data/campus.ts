@@ -24,6 +24,12 @@ export const CAMPUS_ZONES: CampusZone[] = [
   { id: 'plaza-academica', label: 'Plaza Académica', kind: 'OPEN' },
 ];
 
+/** Suggestions for the career field in Perfil (free text is also accepted). */
+export const CAREERS = [
+  'Ciencias de la Computación', 'Arquitectura', 'Administración', 'Medicina', 'Ingeniería Industrial',
+  'Psicología', 'Comunicación', 'Derecho', 'Economía', 'Ingeniería Civil',
+];
+
 /** How long a manual presence report stays valid before it is shown as outdated. */
 export const PRESENCE_TTL_MS = 4 * 60 * 60 * 1000;
 

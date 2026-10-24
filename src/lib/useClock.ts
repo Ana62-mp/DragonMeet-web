@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
+import { create } from 'zustand';
 import { ecuadorNow } from '../domain/time.ts';
-import { useApp } from '../store';
 
 const REFRESH_MS = 30_000;
 
-/** Ecuador day/minute, refreshed periodically. A demo simulation overrides only day and minute;
- * `ts` is always the real timestamp (used for presence expiry).
- */
+/** Demo-only override (Perfil > Preferencias). Only day and minute change; the real timestamp is untouched. */
+export const useSimulatedClock = create<{ clock: { day: number; minutes: number } | null; set: (c: { day: number; minutes: number } | null) => void }>(set => ({
+  clock: null,
+  set: clock => set({ clock }),
+}));
+
+/** Ecuador day/minute refreshed periodically; `ts` is always the real timestamp (used for presence expiry). */
 export function useClock() {
-  const simulated = useApp(s => s.simulatedClock);
+  const simulated = useSimulatedClock(s => s.clock);
   const [ts, setTs] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setTs(Date.now()), REFRESH_MS);

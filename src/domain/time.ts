@@ -35,3 +35,10 @@ export function parseTime(text: string): number | null {
   const [hours, minutes] = [Number(match[1]), Number(match[2])];
   return hours < 24 && minutes < 60 ? hours * 60 + minutes : null;
 }
+
+/** Postgres `time` ("09:30:00") ⇄ decimal hours (9.5). */
+export const fromPgTime = (time: string) => {
+  const [hours, minutes] = time.split(':').map(Number);
+  return fromMinutes(hours * 60 + minutes);
+};
+export const toPgTime = (decimalHours: number) => `${formatMinutes(toMinutes(decimalHours))}:00`;

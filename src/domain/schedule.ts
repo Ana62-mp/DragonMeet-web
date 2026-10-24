@@ -1,4 +1,4 @@
-import type { Entry } from '../store';
+import type { Entry } from '../types';
 import { CLASS_BUILDINGS } from '../data/campus.ts';
 import { isValidRange, overlaps, toMinutes } from './time.ts';
 

@@ -1,55 +1,78 @@
-# DragonMeet USFQ · Web Demo
+# DragonMeet USFQ
 
 **Match your time. Find your people.**
 
-Prototipo académico web responsive para comparar horarios en el campus Cumbayá. **No es una app oficial ni se conecta con USFQ** (sin Microsoft 365, Banner, GPS ni IA real). Todos los estudiantes, horarios y zonas son ficticios.
+Prototipo académico web (mobile-first) para encontrar ventanas libres en común entre amigos universitarios del campus Cumbayá. **No es una app oficial de USFQ**: no usa Microsoft 365, Banner, GPS ni IA real. Los datos de las cuentas de prueba son ficticios.
 
-## Ejecutar
+## Stack
 
-Requisitos: Node.js 22+ y npm.
-
-```bash
-npm install
-npm run dev      # demo local, no necesita .env ni servicios externos
-npm run test     # motor de coincidencias, permisos, disponibilidad y validaciones
-npm run build
-```
-
-## Funcionalidades
-
-- Demo con 5 estudiantes ficticios (Ana, Vale, Paulo, Sofía, Diego); cambia de perspectiva en **Perfil > Herramientas demo**.
-- **Horario** lunes–viernes 07:00–20:00 con selector de hora tipo rueda (minutos exactos), solo edificios académicos y validación de solapamientos.
-- **Privacidad por clase** (Perfil): `Materia y horario` o `Solo bloques ocupados`. Tú siempre ves tus clases completas; un amigo autorizado puede ver tu horario desde el selector de **Mi horario**.
-- **Importar foto (demo IA)**: simulación determinista; no analiza ni envía la imagen. Se revisa y edita antes de guardar.
-- **Estoy en campus** (Mapa y Perfil) independiente de *Compartir mi zona*; la presencia manual expira a las 4 h.
-- **Amigos sin clases y en campus ahora** en Inicio (hora de Ecuador). Para probar otro día/hora usa la simulación en Herramientas demo; el reloj real no cambia. «Sin clases» no significa tiempo libre personal.
-- **Dragon Map**: SVG ilustrativo original (no es GPS ni plano oficial) con zonas clicables y teclado.
-- Motor Match con cortes exactos al minuto para 2–5 participantes.
+React 18 · TypeScript · Vite · React Router · Zustand · Tailwind (base) + CSS propio · Lucide · **Supabase** (Auth + PostgreSQL con RLS).
 
 ## Estructura
 
 ```text
-src/main.tsx          pantallas y rutas
-src/store.ts          estado Zustand (persistido en localStorage)
-src/engine.ts         cálculo de coincidencias
-src/domain/           time, schedule (validación), permissions (visibilidad), availability
-src/data/             catálogos de edificios/zonas y fixture de la foto demo
-src/components/       Avatar, TimeWheelPicker, ClassFormModal, SchedulePhotoDemo,
-                      AvailableFriendsPanel, CampusSvgMap
-src/lib/              useClock, dataMode
-src/services/         scheduleMapping (horas decimales ⇄ minutos para PostgreSQL)
-supabase/             schema.sql, seed_demo.sql
+src/pages/        Login, Dashboard, Schedule, Friends, Match, CampusMap, Profile
+src/components/   Layout, ui (Badge, Toggle, Segmented, Skeleton, Toaster…), TimeWheelPicker, CampusSvgMap…
+src/hooks/        useFriends, useSchedule, useDebounce
+src/services/     profiles, schedule, friends, invites (único lugar que habla con Supabase)
+src/store.ts      estado en memoria cargado desde Supabase (sin datos quemados)
+src/domain/       reglas puras: tiempo, validación de clases, disponibilidad
+supabase/         migrations/001_schema.sql, seed.sql (generado)
+scripts/          seed-data.ts, seed-users.ts, build-seed-sql.ts
 ```
 
-## Conectar Supabase (fase 2, opcional)
+## Puesta en marcha
 
-Estado actual: **`VITE_DATA_MODE=demo`**. El esquema y las funciones están listos; el cliente cloud **aún no está implementado** y, si se pide `supabase`, la app avisa y sigue en demo.
+1. **Crear el proyecto** en [supabase.com](https://supabase.com) (plan gratuito).
+2. **Auth:** *Authentication › Providers › Email*: deja activo el correo/contraseña y **desactiva «Allow new users to sign up»** (las cuentas las crea el script).
+3. **Migración:** abre *SQL Editor*, pega `supabase/migrations/001_schema.sql` y ejecútalo.
+4. **Variables:** copia `.env.example` a `.env.local` y rellena (nunca se sube al repo):
+   - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (*Project Settings › API*).
+   - `SUPABASE_SERVICE_ROLE_KEY` (solo para el seed, **nunca** con prefijo `VITE_`).
+   - `SEED_PASSWORD_ANA`, `SEED_PASSWORD_VALE`, `SEED_PASSWORD_PAULO`, `SEED_PASSWORD_FILLER` (las eliges tú).
+5. **Cuentas:** `npm install` y luego `npm run seed:users` (crea 17 usuarios de Auth; el perfil lo crea un trigger).
+6. **Datos de ejemplo:** pega `supabase/seed.sql` en el SQL Editor (horarios, amistades, permisos y zonas). Si cambias `scripts/seed-data.ts`, regenera con `npm run seed:sql`. Las zonas de presencia caducan a las 4 h: vuelve a ejecutar `seed.sql` para refrescarlas.
+7. **Local:** `npm run dev`.
 
-1. Crea un proyecto en Supabase y ejecuta `supabase/schema.sql` en el SQL Editor (RLS activo, nada legible por `anon`).
-2. En *Authentication* crea cinco usuarios de prueba (contraseñas que elijas tú; no van en SQL ni en el repo) y ejecuta `supabase/seed_demo.sql` (ajusta los correos si usas otros).
-3. Copia `.env.example` a `.env` y completa `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`. **Nunca** uses `service_role` en el frontend.
-4. Falta escribir el adaptador cliente: lecturas de datos ajenos **solo** con las RPC `get_friend_schedule`, `get_visible_friend_zones` y `get_friends_on_campus_now`, que filtran en el servidor (ocultar texto en React no protege una respuesta de API). Hay que probar las políticas con las cinco cuentas antes de activar el modo.
+## Cuentas de prueba
 
-## Aviso
+| Persona | Correo | Contraseña |
+|---|---|---|
+| Ana Paula Moposita | pmoposita@estud.usfq.edu.ec | `SEED_PASSWORD_ANA` |
+| Valentina Paredes | vparedes1@estud.usfq.edu.ec | `SEED_PASSWORD_VALE` |
+| Paulo Pérez | pperez@estud.usfq.edu.ec | `SEED_PASSWORD_PAULO` |
+| 14 estudiantes de relleno | ver `scripts/seed-data.ts` | `SEED_PASSWORD_FILLER` |
 
-Mapa ilustrativo de referencia · No es ubicación GPS ni plano oficial interactivo. La lista de edificios es de referencia y debe validarse con la universidad.
+Historia de la demo: Ana ↔ Vale y Ana ↔ Paulo son amigos con horario y zona compartidos; Vale → Paulo es una solicitud pendiente (acéptala desde Paulo); Sebastián y Emilia tienen solicitudes pendientes hacia Ana; Camila comparte solo «bloques ocupados»; Isabella es amiga pero Ana no le comparte nada. Los códigos Banner `0099xxxx` son ficticios.
+
+## Seguridad
+
+- RLS en todas las tablas; `anon` no tiene acceso a nada.
+- Cada estudiante solo lee y edita sus propias filas. `email`, `banner_code` e `id` no se pueden modificar desde el cliente.
+- Perfiles, horarios y zona de otras personas **solo salen por funciones del servidor** (`search_users`, `list_connections`, `get_visible_schedules`, `get_visible_friend_zones`, `get_friend_access`) que exigen amistad aceptada y permiso de **ambos** lados; con «Solo bloques ocupados» el servidor ni siquiera envía nombre ni edificio. Código y aula nunca salen.
+- Eliminar un amigo borra la amistad y los permisos en ambos sentidos y cancela los encuentros compartidos.
+- No se guardan coordenadas ni historial de movimientos: solo la última zona general, que caduca a las 4 h.
+- La clave `anon` es pública por diseño; la `service_role` solo vive en `.env.local`.
+
+## Pruebas y calidad
+
+```bash
+npm run test    # motor, reglas de dominio, datos del seed y 12 pruebas de RLS contra Postgres real (PGlite)
+npm run lint
+npm run build
+```
+
+Las pruebas SQL ejecutan la migración y el `seed.sql` reales en un Postgres en memoria y verifican aislamiento, enmascarado, revocación y restricciones.
+
+## Despliegue en Vercel
+
+1. Sube el repo a GitHub e impórtalo en Vercel (preset *Vite*; build `npm run build`, salida `dist`).
+2. En *Settings › Environment Variables* añade `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (solo esas dos).
+3. `vercel.json` ya incluye el rewrite para que las rutas de la SPA funcionen al recargar.
+4. En Supabase, *Authentication › URL Configuration*: añade la URL de Vercel como *Site URL*.
+
+## Decisiones
+
+- Zonas: se mantiene el catálogo de 13 zonas del plano (edificios y espacios abiertos) en la tabla `campus_zones`, en lugar del enum inicial con Student Union/Hall, que no se pudo verificar en el plano. Los espacios abiertos se pueden elegir como ubicación pero no como edificio de clase.
+- Se conservan: rueda horaria, «Solo bloques ocupados», «Estoy en campus», importar foto (demo, sin IA real) y simulación de hora para probar «Ahora en campus».
+- Mapa ilustrativo de referencia · No es ubicación GPS ni plano oficial interactivo.

@@ -3,7 +3,8 @@ import { Check, Trash2, X } from 'lucide-react';
 import { CLASS_BUILDINGS, normalizeBuilding } from '../data/campus.ts';
 import { validateSlot } from '../domain/schedule.ts';
 import { fromMinutes, toMinutes } from '../domain/time.ts';
-import { days, type Entry } from '../store';
+import { days } from '../store';
+import type { Entry } from '../types';
 import { TimeWheelPicker } from './TimeWheelPicker.tsx';
 
 type Props = {
