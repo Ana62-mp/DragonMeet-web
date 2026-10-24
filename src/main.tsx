@@ -36,64 +36,45 @@ import {
   LockKeyhole,
   BookOpen,
   CheckCircle2,
+  ImagePlus,
 } from "lucide-react";
 import {
   useApp,
   users,
   days,
-  zones,
-  fmt,
   calculate,
-  canView,
-  isFriend,
   type Entry,
   type Invite,
 } from "./store";
+import { CAMPUS_ZONES, zoneLabel } from "./data/campus.ts";
+import { getVisibleFriendsByZone } from "./domain/availability.ts";
+import {
+  BUSY_LABEL,
+  areFriends as isFriend,
+  canView,
+  canViewSchedule,
+  getVisibleSchedule,
+  isPresenceFresh,
+  type ScheduleDisclosure,
+} from "./domain/permissions.ts";
+import { ecuadorNow, fmt, formatMinutes, parseTime } from "./domain/time.ts";
+import { useClock } from "./lib/useClock.ts";
+import { describeDataMode } from "./lib/dataMode.ts";
+import { Avatar, person } from "./components/Avatar.tsx";
+import { AvailableFriendsPanel } from "./components/AvailableFriendsPanel.tsx";
+import { CampusSvgMap } from "./components/CampusSvgMap.tsx";
+import { ClassFormModal } from "./components/ClassFormModal.tsx";
+import { SchedulePhotoDemo } from "./components/SchedulePhotoDemo.tsx";
 import "./style.css";
-const person = (id: string) => users.find((u) => u.id === id)!;
-const dayNow = () => {
-  const d = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Guayaquil",
-    weekday: "short",
-  }).format(new Date());
-  return { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4 }[d as "Mon"] ?? -1;
-};
-const nowHour = () => {
-  const p = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "America/Guayaquil",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })
-    .format(new Date())
-    .split(":")
-    .map(Number);
-  return p[0] + p[1] / 60;
-};
-function Avatar({ id, size = 42 }: { id: string; size?: number }) {
-  const u = person(id);
-  return (
-    <span
-      className="avatar"
-      style={{
-        width: size,
-        height: size,
-        background: u.color + "18",
-        color: u.color,
-        borderColor: u.color + "28",
-        fontSize: size * 0.31,
-      }}
-    >
-      {u.initials}
-    </span>
-  );
-}
+const { notice: dataModeNotice } = describeDataMode(import.meta.env);
+const dayNow = () => ecuadorNow().day;
+const nowHour = () => ecuadorNow().minutes / 60;
 function Brand() {
   return (
     <div className="brand">
       <div className="brand-icon">✦</div>
       <span>
-        DRAGON<span className="brand-light">MATCH</span>
+        DRAGON<span className="brand-light">MEET</span>
         <small>USFQ · WEB DEMO</small>
       </span>
     </div>
@@ -177,6 +158,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         <div className="side-bottom">
           <div className="demo-label">
             <span className="pulse-dot" /> Modo demostración
+            {dataModeNotice && <small>{dataModeNotice}</small>}
           </div>
           <button className="profile-shortcut" onClick={() => nav("/perfil")}>
             <Avatar id={s.current} />
@@ -198,7 +180,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <Menu size={22} />
           </button>
           <div className="topbar-left">
-            <span className="crumb">Dragon Match</span>
+            <span className="crumb">DragonMeet</span>
             <ChevronRight size={14} />
             <span className="topbar-sub">Campus Cumbayá</span>
           </div>
@@ -273,7 +255,7 @@ function Login() {
           <div className="welcome-icon">✦</div>
           <h2>
             ¡Bienvenido a<br />
-            Dragon Match!
+            DragonMeet!
           </h2>
           <p>Tu vida universitaria, mejor conectada.</p>
           <button
@@ -491,7 +473,8 @@ function Dashboard() {
           )}
         </section>
       </div>
-      <h2 className="section-title">Explora Dragon Match</h2>
+      <AvailableFriendsPanel />
+      <h2 className="section-title">Explora DragonMeet</h2>
       <div className="quick-grid">
         {[
           {
@@ -541,7 +524,7 @@ function Dashboard() {
                 <div>
                   <b>{i.title}</b>
                   <small>
-                    {i.date} · {fmt(i.start)} · {i.zone}
+                    {i.date} · {fmt(i.start)} · {zoneLabel(i.zone)}
                   </small>
                 </div>
                 <Badge tone={i.cancelled ? "rose" : "green"}>
@@ -561,62 +544,60 @@ function Schedule() {
   const [day, setDay] = useState(Math.max(dayNow(), 0));
   const [edit, setEdit] = useState<Entry | null>(null);
   const [open, setOpen] = useState(false);
-  const currentEntries = s.entries.filter((e) => e.user === s.current);
-  const [error, setError] = useState("");
-  function save(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const f = new FormData(e.currentTarget);
-    const start = Number(f.get("start"));
-    const end = Number(f.get("end"));
-    const d = Number(f.get("day"));
-    if (start < 7 || end > 20 || end <= start) {
-      setError("Utiliza horas válidas entre 07:00 y 20:00.");
-      return;
-    }
-    if (
-      currentEntries.some(
-        (x) =>
-          x.id !== edit?.id && x.day === d && x.start < end && x.end > start,
-      )
-    ) {
-      setError("Este bloque se superpone con otra clase.");
-      return;
-    }
-    const entry: Entry = {
-      id: edit?.id ?? crypto.randomUUID(),
-      user: s.current,
-      title: String(f.get("title")),
-      code: String(f.get("code")),
-      day: d,
-      start,
-      end,
-      building: String(f.get("building")),
-      room: String(f.get("room")),
-    };
-    s.addEntry(entry);
+  const [importing, setImporting] = useState(false);
+  const [viewing, setViewing] = useState(s.current);
+  const sharers = users.filter(
+    (u) => u.id !== s.current && canViewSchedule(s, s.current, u.id),
+  );
+  const owner = sharers.some((u) => u.id === viewing) ? viewing : s.current;
+  const isOwn = owner === s.current;
+  const ownEntries = s.entries.filter((e) => e.user === s.current);
+  const visible = getVisibleSchedule(s, s.current, owner);
+  const closeForm = () => {
     setOpen(false);
     setEdit(null);
-    setError("");
-  }
+  };
   return (
     <>
       <Heading
         eyebrow="VIDA ACADÉMICA"
-        title="Mi horario"
+        title={isOwn ? "Mi horario" : `Horario de ${person(owner).name}`}
         desc="Todo tu semestre, en un solo lugar."
         action={
-          <Button
-            onClick={() => {
-              setEdit(null);
-              setOpen(true);
-            }}
-          >
-            <Plus size={17} /> Agregar clase
-          </Button>
+          isOwn && (
+            <div className="heading-actions">
+              <button className="btn secondary" onClick={() => setImporting(true)}>
+                <ImagePlus size={17} /> Importar foto (demo IA)
+              </button>
+              <Button
+                onClick={() => {
+                  setEdit(null);
+                  setOpen(true);
+                }}
+              >
+                <Plus size={17} /> Agregar clase
+              </Button>
+            </div>
+          )
         }
       />
       <div className="schedule-toolbar">
         <Badge tone="rose">Semestre demo · 2026-2027</Badge>
+        {sharers.length > 0 && (
+          <select
+            className="viewer-select"
+            aria-label="Horario que quieres ver"
+            value={owner}
+            onChange={(e) => setViewing(e.target.value)}
+          >
+            <option value={s.current}>Mi horario</option>
+            {sharers.map((u) => (
+              <option key={u.id} value={u.id}>
+                Horario de {u.name}
+              </option>
+            ))}
+          </select>
+        )}
         <span>
           <span className="legend-dot busy" /> Clases{" "}
           <span className="legend-dot available" /> Tiempo libre
@@ -657,160 +638,93 @@ function Schedule() {
               {Array.from({ length: 13 }, (_, j) => (
                 <div className="hour-line" key={j} style={{ top: j * 60 }} />
               ))}
-              {currentEntries
+              {visible
                 .filter((e) => e.day === i)
-                .map((e) => (
-                  <button
-                    key={e.id}
-                    className="course-block"
-                    style={{
-                      top: (e.start - 7) * 60,
-                      height: (e.end - e.start) * 60 - 3,
-                      background: [
-                        "#FBE8E9",
-                        "#EDE9FE",
-                        "#DBEAFE",
-                        "#FEF3C7",
-                        "#DCFCE7",
-                      ][currentEntries.findIndex((x) => x.id === e.id) % 5],
-                    }}
-                    onClick={() => {
-                      setDay(i);
-                      setEdit(e);
-                      setOpen(true);
-                    }}
-                  >
-                    <b>{e.title}</b>
-                    <span>
-                      {fmt(e.start)}–{fmt(e.end)}
-                    </span>
-                    <small>
-                      {e.building} · {e.room}
-                    </small>
-                  </button>
-                ))}
+                .map((e) => {
+                  const ownEntry = isOwn
+                    ? ownEntries.find((x) => x.id === e.id)
+                    : undefined;
+                  return (
+                    <button
+                      key={e.id}
+                      className={"course-block" + (ownEntry ? "" : " static")}
+                      style={{
+                        top: (e.start - 7) * 60,
+                        height: (e.end - e.start) * 60 - 3,
+                        background: e.busyOnly
+                          ? person(owner).color + "22"
+                          : [
+                              "#FBE8E9",
+                              "#EDE9FE",
+                              "#DBEAFE",
+                              "#FEF3C7",
+                              "#DCFCE7",
+                            ][visible.findIndex((x) => x.id === e.id) % 5],
+                        borderLeftColor: e.busyOnly
+                          ? person(owner).color
+                          : undefined,
+                      }}
+                      onClick={
+                        ownEntry
+                          ? () => {
+                              setDay(i);
+                              setEdit(ownEntry);
+                              setOpen(true);
+                            }
+                          : undefined
+                      }
+                    >
+                      <b>{e.busyOnly ? BUSY_LABEL : e.title}</b>
+                      <span>
+                        {fmt(e.start)}–{fmt(e.end)}
+                      </span>
+                      {!e.busyOnly && (
+                        <small>
+                          {e.building}
+                          {isOwn && ` · ${e.room}`}
+                        </small>
+                      )}
+                    </button>
+                  );
+                })}
             </div>
           ))}
         </div>
       </div>
       <p className="subtle-note">
-        <ShieldCheck size={16} /> Horario ficticio editable. Los cambios
-        actualizan Dragon Match automáticamente.
+        <ShieldCheck size={16} />{" "}
+        {isOwn
+          ? "Horario ficticio editable. Los cambios actualizan DragonMeet automáticamente."
+          : "Solo ves lo que esta persona decidió compartir contigo."}
       </p>
       {open && (
-        <div
-          className="modal-backdrop"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
+        <ClassFormModal
+          entry={edit}
+          defaultDay={day}
+          userId={s.current}
+          siblings={ownEntries}
+          onSave={(entry) => {
+            s.addEntry(entry);
+            closeForm();
           }}
-        >
-          <div className="modal">
-            <div className="modal-top">
-              <h2>{edit ? "Editar clase" : "Agregar clase"}</h2>
-              <button className="iconbutton" onClick={() => setOpen(false)}>
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={save} className="form">
-              <label>
-                Nombre de materia
-                <input
-                  name="title"
-                  required
-                  defaultValue={edit?.title}
-                  placeholder="Programación I"
-                />
-              </label>
-              <label>
-                Código
-                <input
-                  name="code"
-                  required
-                  defaultValue={edit?.code}
-                  placeholder="CMP-101"
-                />
-              </label>
-              <label>
-                Día
-                <select name="day" defaultValue={edit?.day ?? day}>
-                  {days.map((d, i) => (
-                    <option value={i} key={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="form-two">
-                <label>
-                  Inicio (hora decimal)
-                  <input
-                    name="start"
-                    type="number"
-                    min="7"
-                    max="20"
-                    step="0.25"
-                    required
-                    defaultValue={edit?.start ?? 9}
-                  />
-                </label>
-                <label>
-                  Fin (hora decimal)
-                  <input
-                    name="end"
-                    type="number"
-                    min="7"
-                    max="20"
-                    step="0.25"
-                    required
-                    defaultValue={edit?.end ?? 10.5}
-                  />
-                </label>
-              </div>
-              <div className="form-two">
-                <label>
-                  Edificio
-                  <select
-                    name="building"
-                    defaultValue={edit?.building ?? "Da Vinci"}
-                  >
-                    {zones.map((z) => (
-                      <option key={z}>{z}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Aula
-                  <input
-                    name="room"
-                    required
-                    defaultValue={edit?.room}
-                    placeholder="DV-101"
-                  />
-                </label>
-              </div>
-              {error && <p className="error">{error}</p>}
-              <div className="modal-actions">
-                {edit && (
-                  <button
-                    type="button"
-                    className="delete-link"
-                    onClick={() => {
-                      if (confirm("¿Eliminar esta clase?")) {
-                        s.removeEntry(edit.id);
-                        setOpen(false);
-                      }
-                    }}
-                  >
-                    <Trash2 size={15} /> Eliminar
-                  </button>
-                )}
-                <Button>
-                  Guardar clase <Check size={16} />
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
+          onDelete={(id) => {
+            s.removeEntry(id);
+            closeForm();
+          }}
+          onClose={closeForm}
+        />
+      )}
+      {importing && (
+        <SchedulePhotoDemo
+          userId={s.current}
+          existing={ownEntries}
+          onConfirm={(entries) => {
+            s.addEntries(entries);
+            s.notify(`${entries.length} clases importadas (demo)`);
+            setImporting(false);
+          }}
+          onClose={() => setImporting(false)}
+        />
       )}
     </>
   );
@@ -1084,7 +998,7 @@ function Match() {
   return (
     <>
       <Heading
-        eyebrow="EL CORAZÓN DE DRAGON MATCH"
+        eyebrow="EL CORAZÓN DE DRAGONMEET"
         title="Encuentra tu Match ✦"
         desc="Superpone horarios y descubre cuándo coincides con tus amigos."
       />
@@ -1366,8 +1280,10 @@ function Match() {
               <label>
                 Lugar
                 <select name="zone">
-                  {zones.map((z) => (
-                    <option key={z}>{z}</option>
+                  {CAMPUS_ZONES.map((z) => (
+                    <option key={z.id} value={z.id}>
+                      {z.label}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1383,33 +1299,24 @@ function Match() {
     </>
   );
 }
-const coords: [
-  [number, number],
-  [number, number],
-  [number, number],
-  [number, number],
-  [number, number],
-  [number, number],
-  [number, number],
-  [number, number],
-  [number, number],
-] = [
-  [115, 90],
-  [325, 80],
-  [530, 90],
-  [135, 235],
-  [325, 240],
-  [530, 235],
-  [105, 385],
-  [325, 395],
-  [530, 390],
-];
 function CampusMap() {
   const s = useApp();
-  const [active, setActive] = useState("Biblioteca");
-  const visible = users.filter(
-    (u) => u.id !== s.current && canView(s, s.current, u.id, "location"),
+  const clock = useClock();
+  const [active, setActive] = useState("biblioteca");
+  const [choice, setChoice] = useState<string | null>(null);
+  const mine = s.presence[s.current];
+  const onCampus = Boolean(s.onCampus[s.current]);
+  const hasFreshZone = isPresenceFresh(mine, clock.ts);
+  const friendsByZone = getVisibleFriendsByZone(
+    s,
+    s.current,
+    users.map((u) => u.id),
+    clock.ts,
   );
+  const hereNow = (friendsByZone[active] ?? []).map(person);
+  const zoneToConfirm = choice ?? mine?.zone ?? CAMPUS_ZONES[0].id;
+  const activeZone = CAMPUS_ZONES.find((z) => z.id === active)!;
+  const sharing = s.global[s.current]?.location;
   return (
     <>
       <Heading
@@ -1421,148 +1328,100 @@ function CampusMap() {
         <div className="panel map-panel">
           <div className="panel-top">
             <h2>Campus Cumbayá</h2>
-            <Badge tone="purple">Mapa conceptual</Badge>
+            <Badge tone="purple">Mapa ilustrativo</Badge>
           </div>
           <div className="map-graphic">
-            <svg
-              viewBox="0 0 650 510"
-              role="img"
-              aria-label="Mapa conceptual de nueve zonas del campus"
-            >
-              <defs>
-                <pattern
-                  id="dots"
-                  width="22"
-                  height="22"
-                  patternUnits="userSpaceOnUse"
-                >
-                  <circle cx="1" cy="1" r="1" fill="#d6dce5" />
-                </pattern>
-              </defs>
-              <rect width="650" height="510" rx="24" fill="#f6f8fa" />
-              <rect width="650" height="510" fill="url(#dots)" />
-              <path
-                d="M115 90 H530 M115 235 H530 M105 385 H530 M115 90 V385 M325 80 V395 M530 90 V390"
-                stroke="#e0e5e9"
-                strokeWidth="24"
-                fill="none"
-                strokeLinecap="round"
-              />
-              <path
-                d="M115 90 H530 M115 235 H530 M105 385 H530 M115 90 V385 M325 80 V395 M530 90 V390"
-                stroke="white"
-                strokeWidth="13"
-                fill="none"
-                strokeLinecap="round"
-              />
-              {zones.map((z, i) => {
-                const [x, y] = coords[i];
-                const selected = z === active;
-                const isHere = s.presence[s.current] === z;
-                const here = visible.filter((u) => s.presence[u.id] === z);
-                return (
-                  <g
-                    key={z}
-                    onClick={() => setActive(z)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setActive(z);
-                      }
-                    }}
-                    style={{ cursor: "pointer" }}
-                    role="button"
-                    aria-label={`Seleccionar ${z}`}
-                    tabIndex={0}
-                  >
-                    <rect
-                      x={x - 87}
-                      y={y - 37}
-                      width="174"
-                      height="74"
-                      rx="15"
-                      fill={selected ? "#ffe8e9" : "#fff"}
-                      stroke={selected ? "#E11B22" : "#dce2e8"}
-                      strokeWidth={selected ? 3 : 1.5}
-                    />
-                    <circle
-                      cx={x}
-                      cy={y - 13}
-                      r="9"
-                      fill={selected ? "#E11B22" : "#e3e8ed"}
-                    />
-                    <text
-                      x={x}
-                      y={y + 12}
-                      textAnchor="middle"
-                      fill="#23252c"
-                      fontSize="13"
-                      fontWeight="700"
-                    >
-                      {z}
-                    </text>
-                    {(here.length > 0 || isHere) && (
-                      <circle
-                        cx={x + 79}
-                        cy={y - 32}
-                        r="11"
-                        fill="#E11B22"
-                        stroke="white"
-                        strokeWidth="3"
-                      />
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
+            <CampusSvgMap
+              active={active}
+              selfZone={onCampus && hasFreshZone ? mine!.zone : null}
+              friendsByZone={friendsByZone}
+              onSelect={setActive}
+            />
           </div>
           <p className="subtle-note">
-            <MapPin size={16} /> Representación ilustrativa; no es un plano
-            geográfico oficial ni un localizador GPS.
+            <MapPin size={16} /> Mapa ilustrativo de referencia · No es
+            ubicación GPS ni plano oficial interactivo
           </p>
         </div>
         <div className="map-side">
           <section className="panel">
             <span className="eyebrow">TU PRESENCIA</span>
-            <h2>¿Dónde estás?</h2>
-            <p className="muted">Actualiza manualmente tu zona general.</p>
-            <div className="form">
-              <label>
-                Mi zona
-                <select
-                  value={s.presence[s.current]}
-                  onChange={(e) => s.setZone(e.target.value)}
-                >
-                  {zones.map((z) => (
-                    <option key={z}>{z}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="location-current">
-              <MapPin size={18} />
-              {s.presence[s.current]}
-            </div>
-            <p className="muted small">
-              Solo los contactos con consentimiento mutuo pueden ver tu zona.
-            </p>
+            <h2>¿Estás en campus?</h2>
+            <Toggle
+              value={onCampus}
+              onChange={s.setOnCampus}
+              label="Estoy en campus"
+              desc="No activa por sí solo compartir tu zona"
+            />
+            {onCampus ? (
+              <div className="form">
+                <label>
+                  ¿En qué zona estás?
+                  <select
+                    value={zoneToConfirm}
+                    onChange={(e) => setChoice(e.target.value)}
+                  >
+                    {CAMPUS_ZONES.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Button onClick={() => s.setZone(zoneToConfirm)}>
+                  {mine ? "Actualizar mi presencia" : "Confirmar ubicación"}
+                </Button>
+              </div>
+            ) : (
+              <p className="muted small">
+                Con el interruptor apagado nadie ve tu zona y no cuentas como
+                presente.
+              </p>
+            )}
+            {onCampus && mine && (
+              <div className="location-current">
+                <MapPin size={18} />
+                {hasFreshZone
+                  ? zoneLabel(mine.zone)
+                  : "Ubicación no actualizada"}
+              </div>
+            )}
+            {onCampus && (
+              <p className="muted small">
+                {sharing
+                  ? "Solo los contactos con consentimiento mutuo pueden ver tu zona."
+                  : "Tu zona sigue privada: activa «Compartir mi zona de campus» en tu perfil."}
+              </p>
+            )}
           </section>
           <section className="panel">
             <span className="eyebrow">ZONA SELECCIONADA</span>
-            <h2>{active}</h2>
-            <p className="muted">Zona de encuentro dentro del campus.</p>
+            <h2>{activeZone.label}</h2>
+            <p className="muted">
+              {activeZone.kind === "BUILDING"
+                ? "Edificio del campus."
+                : "Espacio de encuentro o paso."}
+            </p>
+            <Button
+              secondary
+              onClick={() => {
+                s.setOnCampus(true);
+                s.setZone(active);
+                setChoice(null);
+              }}
+            >
+              <MapPin size={16} /> Estoy aquí
+            </Button>
             <div className="divider" />
             <h3>Amigos visibles aquí</h3>
-            {visible.filter((u) => s.presence[u.id] === active).length ? (
-              visible
-                .filter((u) => s.presence[u.id] === active)
-                .map((u) => (
-                  <div className="person-row" key={u.id}>
-                    <Avatar id={u.id} />
-                    <b>{u.name}</b>
-                    <Badge tone="green">Compartiendo zona</Badge>
-                  </div>
-                ))
+            {hereNow.length ? (
+              hereNow.map((u) => (
+                <div className="person-row" key={u.id}>
+                  <Avatar id={u.id} />
+                  <b>{u.name}</b>
+                  <Badge tone="green">Compartiendo zona</Badge>
+                </div>
+              ))
             ) : (
               <p className="muted small">
                 Ningún amigo ha compartido presencia en esta zona.
@@ -1609,6 +1468,58 @@ function Toggle({
       >
         <span />
       </button>
+    </div>
+  );
+}
+function ClockSimulator() {
+  const s = useApp();
+  const [day, setDay] = useState(Math.max(dayNow(), 0));
+  const [time, setTime] = useState("10:00");
+  const minutes = parseTime(time);
+  return (
+    <div className="form">
+      <label>
+        Simular día y hora (Ecuador)
+        <div className="form-two">
+          <select value={day} onChange={(e) => setDay(Number(e.target.value))}>
+            {days.map((d, i) => (
+              <option value={i} key={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+          />
+        </div>
+      </label>
+      <div className="profile-buttons">
+        <button
+          className="outline-action"
+          disabled={minutes === null}
+          onClick={() => minutes !== null && s.setSimulatedClock({ day, minutes })}
+        >
+          Aplicar simulación
+        </button>
+        {s.simulatedClock && (
+          <button
+            className="outline-action"
+            onClick={() => s.setSimulatedClock(null)}
+          >
+            Usar hora real (activa: {days[s.simulatedClock.day]}{" "}
+            {formatMinutes(s.simulatedClock.minutes)})
+          </button>
+        )}
+        <button className="outline-action" onClick={s.refreshAllPresence}>
+          Actualizar presencia de todos (demo)
+        </button>
+      </div>
+      <p className="muted small">
+        Solo afecta el panel «Amigos sin clases y en campus ahora». Es una
+        simulación; el reloj real no cambia.
+      </p>
     </div>
   );
 }
@@ -1673,6 +1584,7 @@ function Profile() {
                 </select>
               </label>
             </div>
+            <ClockSimulator />
             <div className="profile-buttons">
               <button
                 onClick={() => setConfirmReset(true)}
@@ -1705,11 +1617,37 @@ function Profile() {
               label="Compartir mi horario"
               desc="Autorizar consultas con consentimiento mutuo"
             />
+            <div className="toggle-row">
+              <div>
+                <b>Qué ven mis amigos de mis clases</b>
+                <small>
+                  Tú siempre ves tus clases completas en «Mi horario»
+                </small>
+              </div>
+              <select
+                className="disclosure-select"
+                aria-label="Qué ven mis amigos de mis clases"
+                value={s.disclosure[s.current] ?? "DETAILS"}
+                disabled={!s.global[s.current]?.schedule}
+                onChange={(e) =>
+                  s.setDisclosure(e.target.value as ScheduleDisclosure)
+                }
+              >
+                <option value="DETAILS">Materia y horario</option>
+                <option value="BUSY_ONLY">Solo bloques ocupados</option>
+              </select>
+            </div>
             <Toggle
               value={s.global[s.current]?.location ?? false}
               onChange={(v) => s.setGlobal("location", v)}
               label="Compartir mi zona de campus"
               desc="Nunca compartimos coordenadas exactas"
+            />
+            <Toggle
+              value={Boolean(s.onCampus[s.current])}
+              onChange={s.setOnCampus}
+              label="Estoy en campus"
+              desc="Elige tu zona en Dragon Map; es independiente de compartir"
             />
           </section>
           <section className="panel">
@@ -1759,7 +1697,7 @@ function Profile() {
                     <div>
                       <b>{i.title}</b>
                       <small>
-                        {i.date} · {fmt(i.start)} · {i.zone}
+                        {i.date} · {fmt(i.start)} · {zoneLabel(i.zone)}
                       </small>
                       <small>
                         {i.cancelled

@@ -34,3 +34,10 @@ test('invalid participant sizes are rejected', () => {
  assert.deepEqual(calculate([],[]),[]);
  assert.deepEqual(calculate([],['a','b','c','d','e','f']),[]);
 });
+test('classes cut blocks at the exact minute (no 15-minute rounding)', () => {
+ const blocks=calculate([course('a',0,10+10/60,11)],['a','b']);
+ const busy=blocks.find(b=>b.day===0&&b.free.join()==='b');
+ assert.equal(Math.round(busy.start*60),10*60+10);
+ assert.equal(Math.round(busy.end*60),11*60);
+ assert.equal(Math.round(at(blocks,0,10).end*60),10*60+10);
+});
