@@ -122,7 +122,7 @@ test('search: accent/case-insensitive by name, banner code and email; no private
     assert.equal((await rows(`select * from public.search_users('PEREZ')`))[0].full_name, 'Paulo Pérez');
     assert.equal((await rows(`select * from public.search_users('00990020')`)).length, 0);
     assert.equal((await rows(`select * from public.search_users('0099000')`)).length > 0, true);
-    assert.equal((await rows(`select * from public.search_users('vparedes1@')`)).length, 1);
+    assert.equal((await rows(`select * from public.search_users('jvparedes@')`)).length, 1);
     assert.equal((await rows(`select * from public.search_users('a')`)).length, 0, 'minimum 2 characters');
     assert.equal((await rows(`select * from public.search_users('moposita')`)).length, 0, 'never returns the caller');
     const [row] = await rows(`select * from public.search_users('camila')`);

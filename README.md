@@ -39,7 +39,7 @@ scripts/          seed-data.ts, seed-users.ts, build-seed-sql.ts
 | Persona | Correo | Contraseña |
 |---|---|---|
 | Ana Paula Moposita | pmoposita@estud.usfq.edu.ec | `SEED_PASSWORD_ANA` |
-| Valentina Paredes | vparedes1@estud.usfq.edu.ec | `SEED_PASSWORD_VALE` |
+| Valentina Paredes Torres | jvparedes@estud.usfq.edu.ec | `SEED_PASSWORD_VALE` |
 | Paulo Pérez | pperez@estud.usfq.edu.ec | `SEED_PASSWORD_PAULO` |
 | 14 estudiantes de relleno | ver `scripts/seed-data.ts` | `SEED_PASSWORD_FILLER` |
 

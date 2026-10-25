@@ -17,7 +17,7 @@ export type SeedBlock = { key: string; code: string; name: string; day: number; 
 
 const main: Omit<SeedPerson, 'banner'>[] = [
   { key: 'ana', fullName: 'Ana Paula Moposita Plaza', firstName: 'Ana', email: 'pmoposita@estud.usfq.edu.ec', career: 'Ciencias de la Computación', semester: 1, color: '#E11B22', passwordEnv: 'SEED_PASSWORD_ANA' },
-  { key: 'vale', fullName: 'Valentina Paredes', firstName: 'Valentina', email: 'vparedes1@estud.usfq.edu.ec', career: 'Ciencias de la Computación', semester: 1, color: '#8B5CF6', passwordEnv: 'SEED_PASSWORD_VALE' },
+  { key: 'vale', fullName: 'Valentina Paredes Torres', firstName: 'Valentina', email: 'jvparedes@estud.usfq.edu.ec', career: 'Ciencias de la Computación', semester: 1, color: '#8B5CF6', passwordEnv: 'SEED_PASSWORD_VALE' },
   { key: 'paulo', fullName: 'Paulo Pérez', firstName: 'Paulo', email: 'pperez@estud.usfq.edu.ec', career: 'Ciencias de la Computación', semester: 4, color: '#3B82F6', passwordEnv: 'SEED_PASSWORD_PAULO' },
 ];
 
