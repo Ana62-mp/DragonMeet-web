@@ -110,3 +110,15 @@ test('seed relationships match the demo story', () => {
   assert.equal(people.find(p => p.key === 'ana').firstName, 'Ana');
   assert.equal(people.find(p => p.key === 'vale').firstName, 'Valentina');
 });
+
+test('dayLoad sums class and free time in the 07:00-20:00 window without double counting', async () => {
+  const { dayLoad, formatDuration } = await import('../src/domain/schedule.ts');
+  const classes = [entry('a', 0, 8, 9.5), entry('a', 0, 9, 10), entry('a', 0, 19, 21), entry('a', 1, 8, 9)];
+  assert.deepEqual(dayLoad(classes, 0), { classMin: 120 + 60, freeMin: 780 - 180 });
+  assert.deepEqual(dayLoad(classes, 0, 9 * 60 + 30), { classMin: 30 + 60, freeMin: 630 - 90 });
+  assert.deepEqual(dayLoad(classes, 3), { classMin: 0, freeMin: 780 });
+  assert.deepEqual(dayLoad(classes, 0, 22 * 60), { classMin: 0, freeMin: 0 });
+  assert.equal(formatDuration(210), '3 h 30 min');
+  assert.equal(formatDuration(120), '2 h');
+  assert.equal(formatDuration(45), '45 min');
+});

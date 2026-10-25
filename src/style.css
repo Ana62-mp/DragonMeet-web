@@ -90,3 +90,13 @@
   .dashboard-grid .empty{min-height:110px}
 }
 @media(max-width:700px){.matrix{min-width:0;grid-template-columns:38px repeat(5,minmax(0,1fr))}}
+
+/* phones: six-item bottom bar, no zoom-on-focus in iOS, no dead hamburger */
+.mobile-nav a{position:relative}
+.mobile-nav a i{position:absolute;top:-4px;right:calc(50% - 20px);background:#e11b22;color:#fff;border-radius:100px;padding:1px 5px;font-size:9px;font-style:normal}
+@media(max-width:700px){
+  .menubtn{display:none}
+  .mobile-nav a{min-width:0;flex:1}
+  input,select,textarea{font-size:16px!important}
+}
+.stat.weekend{grid-column:span 2}

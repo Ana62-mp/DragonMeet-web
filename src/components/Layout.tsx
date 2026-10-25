@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Bell, CalendarDays, ChevronRight, HeartHandshake, Home, MapPinned, Menu, UserRound, Users } from 'lucide-react';
+import { Bell, CalendarDays, ChevronRight, HeartHandshake, Home, MapPinned, UserRound, Users } from 'lucide-react';
 import { useApp } from '../store';
 import { Avatar } from './Avatar';
 import { Badge, PageSkeleton, Toaster } from './ui';
@@ -12,6 +12,9 @@ const links = [
   { to: '/mapa', label: 'Mapa', Icon: MapPinned },
   { to: '/perfil', label: 'Perfil', Icon: UserRound },
 ];
+
+/** Phone bar: same destinations as the sidebar, with Amigos before Perfil. */
+const mobileLinks = [...links.slice(0, 4), { to: '/amigos', label: 'Amigos', Icon: Users }, links[4]];
 
 export function Brand() {
   return (
@@ -48,22 +51,21 @@ export function Layout({ children }: { children: ReactNode }) {
   const refresh = useApp(s => s.refresh);
   const incoming = useApp(s => s.friendships.filter(f => f.status === 'pending' && f.addressee === s.me?.id).length);
   const nav = useNavigate();
-  const [showMenu, setShowMenu] = useState(false);
   useAutoRefresh();
 
   return (
     <div className="layout">
-      <aside className={'sidebar ' + (showMenu ? 'open' : '')}>
+      <aside className="sidebar">
         <Brand />
         <div className="side-label">TU ESPACIO</div>
         <nav>
           {links.map(({ to, label, Icon }) => (
-            <NavLink key={to} to={to} end={to === '/'} onClick={() => setShowMenu(false)} className={({ isActive }) => 'navlink ' + (isActive ? 'active' : '')}>
+            <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => 'navlink ' + (isActive ? 'active' : '')}>
               <Icon size={19} />
               {label}
             </NavLink>
           ))}
-          <NavLink to="/amigos" className={({ isActive }) => 'navlink ' + (isActive ? 'active' : '')} onClick={() => setShowMenu(false)}>
+          <NavLink to="/amigos" className={({ isActive }) => 'navlink ' + (isActive ? 'active' : '')}>
             <Users size={19} />
             Amigos
             {incoming > 0 && <i>{incoming}</i>}
@@ -82,9 +84,6 @@ export function Layout({ children }: { children: ReactNode }) {
       </aside>
       <div className="workarea">
         <header className="topbar">
-          <button className="iconbutton menubtn" onClick={() => setShowMenu(!showMenu)} aria-label="Abrir menú">
-            <Menu size={22} />
-          </button>
           <div className="topbar-left">
             <span className="crumb">DragonMeet</span>
             <ChevronRight size={14} />
@@ -112,10 +111,11 @@ export function Layout({ children }: { children: ReactNode }) {
         </main>
       </div>
       <nav className="mobile-nav" aria-label="Navegación principal">
-        {links.map(({ to, label, Icon }) => (
+        {mobileLinks.map(({ to, label, Icon }) => (
           <NavLink to={to} end={to === '/'} key={to} className={({ isActive }) => (isActive ? 'selected' : '')}>
             <Icon size={21} />
             <span>{label}</span>
+            {to === '/amigos' && incoming > 0 && <i>{incoming}</i>}
           </NavLink>
         ))}
       </nav>

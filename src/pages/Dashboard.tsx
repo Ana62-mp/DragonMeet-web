@@ -1,12 +1,14 @@
-import { ArrowRight, BookOpen, CalendarDays, Clock3, HeartHandshake, MapPin, MapPinned, Users } from 'lucide-react';
+import { ArrowRight, BookOpen, CalendarDays, Clock3, HeartHandshake, MapPin, MapPinned, Sun, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
 import { AvailableFriendsPanel } from '../components/AvailableFriendsPanel';
 import { Badge, Button } from '../components/ui';
 import { zoneLabel } from '../data/campus.ts';
-import { ecuadorNow, fmt } from '../domain/time.ts';
+import { dayLoad, formatDuration } from '../domain/schedule.ts';
+import { DAY_END_MIN, DAY_START_MIN, fmt } from '../domain/time.ts';
 import { useFriends } from '../hooks/useFriends';
 import { useSchedule } from '../hooks/useSchedule';
+import { useClock } from '../lib/useClock';
 import { calculate, days, useApp } from '../store';
 
 const QUICK_LINKS = [
@@ -22,12 +24,15 @@ export function Dashboard() {
   const { friendIds, accessOf } = useFriends();
   const nav = useNavigate();
 
-  const { day: today, minutes } = ecuadorNow();
+  const { day: today, minutes } = useClock();   // honours Perfil > Simular día y hora
+  const weekend = today < 0;
   const hour = minutes / 60;
   const todayClasses = entries.filter(e => e.day === today).sort((a, b) => a.start - b.start);
   const next = todayClasses.find(e => e.end > hour);
-  const freeToday = today < 0 ? 0 : Math.max(0, 20 - Math.max(7, Math.min(20, hour))
-    - todayClasses.reduce((n, e) => n + Math.max(0, e.end - Math.max(7, hour, e.start)), 0));
+  const total = dayLoad(entries, today);
+  const left = dayLoad(entries, today, minutes);
+  const inWindow = !weekend && minutes >= DAY_START_MIN && minutes < DAY_END_MIN;
+  const hoursLabel = (min: number) => `${+(min / 60).toFixed(1)} h`;
 
   const peers = friendIds.filter(id => accessOf(id).schedule).slice(0, 2);
   const upcoming = calculate(allBusy, [me.id, ...peers]).find(
@@ -56,14 +61,23 @@ export function Dashboard() {
       </div>
 
       <div className="stats">
-        <div className="stat">
-          <span className="stat-icon pink"><CalendarDays size={21} /></span>
-          <div><small>Clases hoy</small><b>{todayClasses.length}</b><span>En tu horario</span></div>
-        </div>
-        <div className="stat">
-          <span className="stat-icon mint"><Clock3 size={21} /></span>
-          <div><small>Tiempo libre</small><b>{freeToday.toFixed(1)} h</b><span>07:00–20:00</span></div>
-        </div>
+        {weekend ? (
+          <div className="stat weekend">
+            <span className="stat-icon mint"><Sun size={21} /></span>
+            <div><small>Fin de semana</small><b>Sin clases</b><span>Disfruta tu descanso</span></div>
+          </div>
+        ) : (
+          <>
+            <div className="stat">
+              <span className="stat-icon pink"><CalendarDays size={21} /></span>
+              <div><small>Clases hoy</small><b>{todayClasses.length}</b><span>{total.classMin ? `${formatDuration(total.classMin)} de clase` : 'En tu horario'}</span></div>
+            </div>
+            <div className="stat">
+              <span className="stat-icon mint"><Clock3 size={21} /></span>
+              <div><small>Tiempo libre</small><b>{hoursLabel(total.freeMin)}</b><span>{inWindow ? `Quedan ${hoursLabel(left.freeMin)}` : '07:00–20:00'}</span></div>
+            </div>
+          </>
+        )}
         <div className="stat">
           <span className="stat-icon purple"><Users size={21} /></span>
           <div><small>Amigos</small><b>{friendIds.length}</b><span>En tu red</span></div>
@@ -88,8 +102,8 @@ export function Dashboard() {
           ) : (
             <div className="empty">
               <BookOpen size={32} />
-              <b>{today < 0 ? 'Hoy no hay clases' : 'Sin más clases por hoy'}</b>
-              <p>¡Aprovecha tu tiempo libre!</p>
+              <b>{weekend ? 'Es fin de semana' : 'Sin más clases por hoy'}</b>
+              <p>{weekend ? 'No hay clases hasta el lunes. ¡A descansar!' : '¡Aprovecha tu tiempo libre!'}</p>
             </div>
           )}
         </section>

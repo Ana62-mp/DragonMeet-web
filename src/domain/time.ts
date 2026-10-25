@@ -21,7 +21,7 @@ const WEEKDAYS: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 
 /** Current day (0 = Monday ... 4 = Friday, -1 on weekends) and minute of day in Ecuador. */
 export function ecuadorNow(date = new Date()) {
   const weekday = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Guayaquil', weekday: 'short' }).format(date);
-  const [hours, minutes] = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Guayaquil', hour: '2-digit', minute: '2-digit', hour12: false })
+  const [hours, minutes] = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Guayaquil', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
     .format(date)
     .split(':')
     .map(Number);
