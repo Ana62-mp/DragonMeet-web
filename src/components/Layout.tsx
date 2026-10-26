@@ -1,8 +1,9 @@
 import { useEffect, type ReactNode } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, CalendarDays, ChevronRight, HeartHandshake, Home, MapPinned, UserRound, Users } from 'lucide-react';
 import { useApp } from '../store';
 import { Avatar } from './Avatar';
+import { ChatBot } from './ChatBot';
 import { Badge, PageSkeleton, Toaster } from './ui';
 
 const links = [
@@ -51,6 +52,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const refresh = useApp(s => s.refresh);
   const incoming = useApp(s => s.friendships.filter(f => f.status === 'pending' && f.addressee === s.me?.id).length);
   const nav = useNavigate();
+  const { pathname } = useLocation();
   useAutoRefresh();
 
   return (
@@ -107,7 +109,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <p>{loadError}</p>
               <button className="btn" onClick={() => refresh()}>Reintentar</button>
             </div>
-          ) : loaded ? children : <PageSkeleton />}
+          ) : loaded ? <div className="page" key={pathname}>{children}</div> : <PageSkeleton />}
         </main>
       </div>
       <nav className="mobile-nav" aria-label="Navegación principal">
@@ -119,6 +121,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </NavLink>
         ))}
       </nav>
+      {loaded && <ChatBot />}
       <Toaster />
     </div>
   );

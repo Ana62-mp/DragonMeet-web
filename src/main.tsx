@@ -13,6 +13,7 @@ import { Profile } from './pages/Profile';
 import { Schedule } from './pages/Schedule';
 import { useApp } from './store';
 import './style.css';
+import './motion.css';
 
 function SetupNeeded() {
   return (
