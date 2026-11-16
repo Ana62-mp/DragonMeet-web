@@ -111,3 +111,15 @@
 .meet-past{margin-top:12px;border-top:1px solid #f0f0f3;padding-top:10px}
 .meet-past summary{cursor:pointer;font-size:12px;font-weight:800;color:#7d8490;padding:6px 0}
 @media(max-width:700px){.meet-row{flex-wrap:wrap}.meet-row>div:not(.inline-actions){min-width:0;flex:1 1 calc(100% - 40px)}.invitation-row>div.meet-actions{flex-direction:row;margin-left:32px;flex:1 1 100%}.meet-row>.inline-actions{margin-left:32px}}
+
+/* ───────── Campana: menú de notificaciones ───────── */
+.notif-menu{position:relative}
+.notif-panel{position:absolute;right:0;top:calc(100% + 10px);width:min(370px,calc(100vw - 24px));background:#fff;border:1px solid #edeff3;border-radius:16px;box-shadow:0 20px 50px #10182722;padding:16px;z-index:60}
+.notif-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}.notif-head b{font-size:14px}.notif-head span{font-size:11px;color:#e11b22;font-weight:800}
+.notif-empty{font-size:12px;color:#949ba7;margin:10px 0}
+.notif-item{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid #f1f2f4}
+.notif-item>div:not(.inline-actions){flex:1;min-width:0}.notif-item b,.notif-item small{display:block}.notif-item b{font-size:12px}
+.notif-item small{font-size:10px;color:#949ba7;margin-top:3px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.notif-icon{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#fff0f0;color:#e11b22;flex-shrink:0}
+.notif-links{display:flex;justify-content:space-between;border-top:1px solid #f1f2f4;padding-top:11px;margin-top:2px}
+@media(max-width:700px){.notif-panel{position:fixed;left:12px;right:12px;top:64px;width:auto}}

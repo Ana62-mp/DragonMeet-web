@@ -1,8 +1,9 @@
 import { useEffect, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Bell, CalendarDays, ChevronRight, HeartHandshake, Home, MapPinned, UserRound, Users } from 'lucide-react';
+import { CalendarDays, ChevronRight, HeartHandshake, Home, MapPinned, UserRound, Users } from 'lucide-react';
 import { useApp } from '../store';
 import { Avatar } from './Avatar';
+import { NotificationMenu } from './NotificationMenu';
 import { Badge, PageSkeleton, Toaster } from './ui';
 
 const links = [
@@ -50,10 +51,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const loadError = useApp(s => s.loadError);
   const refresh = useApp(s => s.refresh);
   const incoming = useApp(s => s.friendships.filter(f => f.status === 'pending' && f.addressee === s.me?.id).length);
-  const pendingInvites = useApp(s => s.invites.filter(i => !i.cancelled && i.owner !== s.me?.id && i.responses[s.me?.id ?? ''] === 'pending').length);
   const nav = useNavigate();
   useAutoRefresh();
-  const alerts = incoming + pendingInvites;
 
   return (
     <div className="layout">
@@ -93,14 +92,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
           <div className="topbar-actions">
             <Badge tone="rose">Prototipo académico</Badge>
-            <button
-              className="iconbutton"
-              onClick={() => nav(!incoming && pendingInvites ? '/perfil?tab=meets' : '/amigos')}
-              aria-label={alerts ? `Notificaciones: ${alerts} pendientes` : 'Notificaciones'}
-            >
-              <Bell size={20} />
-              {alerts > 0 && <span className="notif" />}
-            </button>
+            <NotificationMenu />
             <button className="avatar-button" onClick={() => nav('/perfil')} aria-label="Perfil">
               {me && <Avatar id={me.id} size={35} />}
             </button>
