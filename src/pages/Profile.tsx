@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CalendarPlus, Check, GraduationCap, Hash, LogOut, Mail, Settings2, ShieldCheck, X } from 'lucide-react';
 import { Avatar, PersonAvatar } from '../components/Avatar';
 import { Badge, Button, EmptyState, Segmented, Toggle } from '../components/ui';
@@ -11,6 +12,7 @@ import { days, useApp } from '../store';
 import type { Me, ScheduleDisclosure } from '../types';
 
 type Tab = 'privacy' | 'friends' | 'meets' | 'prefs';
+const TABS: Tab[] = ['privacy', 'friends', 'meets', 'prefs'];
 
 const COLORS = ['#E11B22', '#8B5CF6', '#3B82F6', '#EC4899', '#F97316', '#10B981', '#0EA5E9', '#EAB308'];
 
@@ -184,7 +186,10 @@ export function Profile() {
   const me = useApp(s => s.me)!;
   const signOut = useApp(s => s.signOut);
   const incoming = useApp(s => s.invites.filter(i => !i.cancelled && i.responses[s.me?.id ?? ''] === 'pending').length);
-  const [tab, setTab] = useState<Tab>('privacy');
+  // The tab lives in the URL (?tab=meets) so the notification bell can open it directly.
+  const [params, setParams] = useSearchParams();
+  const tab: Tab = TABS.includes(params.get('tab') as Tab) ? (params.get('tab') as Tab) : 'privacy';
+  const setTab = (next: Tab) => setParams(next === 'privacy' ? {} : { tab: next }, { replace: true });
 
   return (
     <>

@@ -28,6 +28,25 @@ export function ecuadorNow(date = new Date()) {
   return { day: WEEKDAYS[weekday] ?? -1, minutes: hours * 60 + minutes };
 }
 
+/** Today's calendar date in Ecuador as ISO "YYYY-MM-DD" (never shifted by UTC). */
+export const ecuadorDate = (date = new Date()) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Guayaquil', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+
+/** True while a meet (ISO date + decimal end hour) has not finished yet, in Ecuador time. */
+export function isUpcoming(isoDate: string, endHours: number, now = new Date()) {
+  const today = ecuadorDate(now);
+  return isoDate > today || (isoDate === today && toMinutes(endHours) > ecuadorNow(now).minutes);
+}
+
+/** Next ISO date (Ecuador) on the given weekday (0 = Monday) whose start time has not passed yet. */
+export function nextDateFor(day: number, startHours: number, now = new Date()) {
+  const d = new Date(`${ecuadorDate(now)}T12:00:00Z`);
+  let add = (day - (d.getUTCDay() + 6) % 7 + 7) % 7;
+  if (add === 0 && ecuadorNow(now).minutes >= toMinutes(startHours)) add = 7;
+  d.setUTCDate(d.getUTCDate() + add);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Parses "HH:MM" (24 h) into minutes, or null when the text is not a valid time. */
 export function parseTime(text: string): number | null {
   const match = /^(\d{1,2}):(\d{2})$/.exec(text.trim());

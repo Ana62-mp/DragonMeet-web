@@ -5,7 +5,7 @@ import { AvailableFriendsPanel } from '../components/AvailableFriendsPanel';
 import { Badge, Button } from '../components/ui';
 import { zoneLabel } from '../data/campus.ts';
 import { dayLoad, formatDuration } from '../domain/schedule.ts';
-import { DAY_END_MIN, DAY_START_MIN, fmt } from '../domain/time.ts';
+import { DAY_END_MIN, DAY_START_MIN, fmt, isUpcoming } from '../domain/time.ts';
 import { useFriends } from '../hooks/useFriends';
 import { useSchedule } from '../hooks/useSchedule';
 import { useClock } from '../lib/useClock';
@@ -38,7 +38,10 @@ export function Dashboard() {
   const upcoming = calculate(allBusy, [me.id, ...peers]).find(
     m => m.status === 'all' && m.end - m.start >= 0.5 && (m.day > today || (m.day === today && m.start >= hour)),
   );
-  const myInvites = invites.filter(i => i.owner === me.id || me.id in i.responses).slice(-3);
+  const myInvites = invites
+    .filter(i => !i.cancelled && i.responses[me.id] !== 'rejected' && (i.owner === me.id || me.id in i.responses) && isUpcoming(i.date, i.end))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start)
+    .slice(0, 3);
 
   return (
     <>

@@ -3,7 +3,7 @@ import { ArrowRight, Clock3, HeartHandshake, Send, ShieldCheck, X } from 'lucide
 import { Avatar, nameOf } from '../components/Avatar';
 import { Badge, Button, EmptyState, Heading } from '../components/ui';
 import { CAMPUS_ZONES } from '../data/campus.ts';
-import { fmt } from '../domain/time.ts';
+import { ecuadorDate, fmt, isUpcoming, nextDateFor } from '../domain/time.ts';
 import { useFriends } from '../hooks/useFriends';
 import { useSchedule } from '../hooks/useSchedule';
 import { toast } from '../lib/toast';
@@ -13,14 +13,6 @@ type Block = ReturnType<typeof calculate>[number];
 
 const MAX_FRIENDS = 4;
 const MIN_BLOCK_HOURS = 0.5;
-
-/** Next calendar date (ISO) that falls on the given weekday (0 = Monday). */
-function nextDate(day: number) {
-  const d = new Date();
-  d.setHours(12, 0, 0, 0);
-  d.setDate(d.getDate() + ((day + 1 - d.getDay() + 7) % 7));
-  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
-}
 
 const minutesOf = (hours: number) => Math.round(hours * 60);
 
@@ -53,6 +45,7 @@ export function Match() {
     const f = new FormData(e.currentTarget);
     const date = String(f.get('date'));
     if (new Date(`${date}T00:00:00`).getDay() !== invite.day + 1) return toast.error('La fecha debe corresponder al día de la coincidencia.');
+    if (!isUpcoming(date, invite.start)) return toast.error('Ese horario ya pasó. Elige otra fecha.');
     if (!invite.free.includes(me.id)) return toast.error('Debes estar libre en este horario para organizar un encuentro.');
     const ok = await createInvite(
       { title: String(f.get('title')), date, start: invite.start, end: invite.end, zone: String(f.get('zone')) },
@@ -216,7 +209,7 @@ export function Match() {
             <p className="muted">{days[invite.day]} · {fmt(invite.start)}–{fmt(invite.end)} · {invite.free.length} participantes libres</p>
             <form className="form" onSubmit={submitInvite}>
               <label>Nombre del encuentro<input name="title" required placeholder="Almuerzo con amigos" /></label>
-              <label>Fecha<input type="date" name="date" min={new Date().toISOString().slice(0, 10)} defaultValue={nextDate(invite.day)} required /></label>
+              <label>Fecha<input type="date" name="date" min={ecuadorDate()} defaultValue={nextDateFor(invite.day, invite.start)} required /></label>
               <label>Lugar
                 <select name="zone">
                   {CAMPUS_ZONES.map(z => <option key={z.id} value={z.id}>{z.label}</option>)}
