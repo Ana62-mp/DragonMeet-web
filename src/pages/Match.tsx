@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ArrowRight, Clock3, HeartHandshake, Send, ShieldCheck, X } from 'lucide-react';
 import { Avatar, nameOf } from '../components/Avatar';
 import { Badge, Button, EmptyState, Heading } from '../components/ui';
@@ -24,7 +25,9 @@ export function Match() {
   const invites = useApp(s => s.invites);
   const { allBusy } = useSchedule();
   const { friends, accessOf } = useFriends();
-  const [selected, setSelected] = useState<string[]>([]);
+  // 'Ver en Match' from Inicio arrives with the recommended friends already picked.
+  const location = useLocation();
+  const [selected, setSelected] = useState<string[]>(() => ((location.state as { friends?: string[] } | null)?.friends ?? []).slice(0, MAX_FRIENDS));
   const [filter, setFilter] = useState('all');
   const [day, setDay] = useState(-1);
   const [sort, setSort] = useState('day');
