@@ -24,11 +24,15 @@ export async function createLocalDb() {
     create extension unaccent with schema extensions;
     grant execute on all functions in schema extensions to authenticated;`);
   await db.exec(sql('migrations/001_schema.sql'));
-  for (const p of people) {
-    const meta = JSON.stringify({ full_name: p.fullName, first_name: p.firstName, banner_code: p.banner, career: p.career, semester: p.semester, avatar_color: p.color });
-    const { rows } = await db.query<{ id: string }>('insert into auth.users (email, raw_user_meta_data) values ($1, $2) returning id', [p.email, meta]);
-    ids[p.key] = rows[0].id;
-  }
+  const users = people.map(p => ({
+    email: p.email,
+    meta: { full_name: p.fullName, first_name: p.firstName, banner_code: p.banner, career: p.career, semester: p.semester, avatar_color: p.color },
+  }));
+  const { rows: created } = await db.query<{ id: string; email: string }>(
+    `insert into auth.users (email, raw_user_meta_data)
+     select u->>'email', u->'meta' from json_array_elements($1::json) with ordinality as t(u, n) order by n
+     returning id::text, email`, [JSON.stringify(users)]);
+  for (const p of people) ids[p.key] = created.find(r => r.email === p.email)!.id;
   await db.exec(sql('seed.sql'));
 
   /** Runs `fn` as the given auth user (or anon when null), the way PostgREST does with a JWT. */
