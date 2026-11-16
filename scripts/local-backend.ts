@@ -70,16 +70,18 @@ async function findUser(column: 'email' | 'id', value: string) {
   return rows[0] ?? null;
 }
 
+const text = (value: unknown) => (typeof value === 'string' ? value : '');
+
 const BAD_LOGIN: Reply = [400, { error: 'invalid_grant', error_description: 'Invalid login credentials', msg: 'Invalid login credentials', code: 'invalid_credentials' }];
 
 async function auth(path: string, url: URL, req: IncomingMessage, body: Row): Promise<Reply> {
   const grant = url.searchParams.get('grant_type');
   if (path === '/token' && grant === 'password') {
-    const user = await findUser('email', String(body.email ?? '').trim().toLowerCase());
+    const user = await findUser('email', text(body.email).trim().toLowerCase());
     return user && body.password === DEMO_LOGIN ? [200, session(user)] : BAD_LOGIN;
   }
   if (path === '/token' && grant === 'refresh_token') {
-    const user = await findUser('id', String(body.refresh_token ?? '').replace(/^local\./, ''));
+    const user = await findUser('id', text(body.refresh_token).replace(/^local\./, ''));
     return user ? [200, session(user)] : [400, { error: 'invalid_grant', msg: 'Invalid Refresh Token' }];
   }
   if (path === '/user') {
