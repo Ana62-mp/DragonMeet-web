@@ -100,3 +100,14 @@
   input,select,textarea{font-size:16px!important}
 }
 .stat.weekend{grid-column:span 2}
+
+/* ───────── Encuentros: grupos, respuestas y calendario ───────── */
+.meet-group{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#89909d;margin:0 0 4px}
+.meet-group+.invitation-row{border-top:0}
+.meet-row{align-items:flex-start}.meet-row>svg{margin-top:2px;flex-shrink:0}
+.meet-chips{margin:8px 0 0}.meet-chips .badge{font-size:10px;padding:5px 8px}
+.invitation-row>div.meet-actions{display:flex;flex-direction:column;gap:6px;align-items:stretch;flex:0 0 auto}
+.meet-row.past{opacity:.6}
+.meet-past{margin-top:12px;border-top:1px solid #f0f0f3;padding-top:10px}
+.meet-past summary{cursor:pointer;font-size:12px;font-weight:800;color:#7d8490;padding:6px 0}
+@media(max-width:700px){.meet-row{flex-wrap:wrap}.meet-row>div:not(.inline-actions){min-width:0;flex:1 1 calc(100% - 40px)}.invitation-row>div.meet-actions{flex-direction:row;margin-left:32px;flex:1 1 100%}.meet-row>.inline-actions{margin-left:32px}}

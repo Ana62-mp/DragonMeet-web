@@ -4,6 +4,7 @@ import { Avatar } from '../components/Avatar';
 import { AvailableFriendsPanel } from '../components/AvailableFriendsPanel';
 import { Badge, Button } from '../components/ui';
 import { zoneLabel } from '../data/campus.ts';
+import { RESPONSE_LABEL, formatMeetDate } from '../domain/meet.ts';
 import { dayLoad, formatDuration } from '../domain/schedule.ts';
 import { DAY_END_MIN, DAY_START_MIN, fmt, isUpcoming } from '../domain/time.ts';
 import { useFriends } from '../hooks/useFriends';
@@ -155,10 +156,10 @@ export function Dashboard() {
               <CalendarDays size={19} />
               <div>
                 <b>{i.title}</b>
-                <small>{i.date} · {fmt(i.start)} · {zoneLabel(i.zone)}</small>
+                <small>{formatMeetDate(i.date)} · {fmt(i.start)} · {zoneLabel(i.zone)}</small>
               </div>
-              <Badge tone={i.cancelled ? 'rose' : 'green'}>
-                {i.cancelled ? 'Cancelado' : i.owner === me.id ? 'Organizador' : i.responses[me.id]}
+              <Badge tone={i.owner === me.id || i.responses[me.id] === 'accepted' ? 'green' : 'gold'}>
+                {i.owner === me.id ? 'Organizador' : RESPONSE_LABEL[i.responses[me.id]]}
               </Badge>
             </div>
           ))}

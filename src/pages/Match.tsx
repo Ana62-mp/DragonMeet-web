@@ -3,6 +3,7 @@ import { ArrowRight, Clock3, HeartHandshake, Send, ShieldCheck, X } from 'lucide
 import { Avatar, nameOf } from '../components/Avatar';
 import { Badge, Button, EmptyState, Heading } from '../components/ui';
 import { CAMPUS_ZONES } from '../data/campus.ts';
+import { clashingMeet } from '../domain/meet.ts';
 import { ecuadorDate, fmt, isUpcoming, nextDateFor } from '../domain/time.ts';
 import { useFriends } from '../hooks/useFriends';
 import { useSchedule } from '../hooks/useSchedule';
@@ -20,6 +21,7 @@ export function Match() {
   const me = useApp(s => s.me)!;
   const people = useApp(s => s.people);
   const createInvite = useApp(s => s.createInvite);
+  const invites = useApp(s => s.invites);
   const { allBusy } = useSchedule();
   const { friends, accessOf } = useFriends();
   const [selected, setSelected] = useState<string[]>([]);
@@ -46,6 +48,8 @@ export function Match() {
     const date = String(f.get('date'));
     if (new Date(`${date}T00:00:00`).getDay() !== invite.day + 1) return toast.error('La fecha debe corresponder al día de la coincidencia.');
     if (!isUpcoming(date, invite.start)) return toast.error('Ese horario ya pasó. Elige otra fecha.');
+    const clash = clashingMeet(invites, me.id, date, invite.start, invite.end);
+    if (clash) return toast.error(`Ya tienes «${clash.title}» a esa hora. Elige otra fecha u horario.`);
     if (!invite.free.includes(me.id)) return toast.error('Debes estar libre en este horario para organizar un encuentro.');
     const ok = await createInvite(
       { title: String(f.get('title')), date, start: invite.start, end: invite.end, zone: String(f.get('zone')) },
