@@ -6,6 +6,7 @@ import { validateSlots } from '../domain/schedule.ts';
 import { formatMinutes, fromMinutes, parseTime } from '../domain/time.ts';
 import { days } from '../store';
 import type { Entry } from '../types';
+import { useEscape } from '../lib/useEscape';
 
 type Step = 'pick' | 'simulating' | 'review';
 type Props = { userId: string; existing: Entry[]; onConfirm: (entries: Entry[]) => void; onClose: () => void };
@@ -14,6 +15,7 @@ const SIMULATION_MS = 1400;
 
 /** Demo of a schedule-photo import. The image is previewed locally and never read, uploaded or kept. */
 export function SchedulePhotoDemo({ userId, existing, onConfirm, onClose }: Props) {
+  useEscape(onClose);
   const [step, setStep] = useState<Step>('pick');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [rows, setRows] = useState<ImportRow[]>([]);
@@ -59,7 +61,7 @@ export function SchedulePhotoDemo({ userId, existing, onConfirm, onClose }: Prop
 
   return (
     <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal wide">
+      <div className="modal wide" role="dialog" aria-modal="true">
         <div className="modal-top">
           <h2>Importar foto (demo IA)</h2>
           <button className="iconbutton" onClick={onClose} aria-label="Cerrar">

@@ -9,6 +9,7 @@ import { ecuadorDate, fmt, isUpcoming, nextDateFor } from '../domain/time.ts';
 import { useFriends } from '../hooks/useFriends';
 import { useSchedule } from '../hooks/useSchedule';
 import { toast } from '../lib/toast';
+import { useEscape } from '../lib/useEscape';
 import { calculate, days, useApp } from '../store';
 
 type Block = ReturnType<typeof calculate>[number];
@@ -33,6 +34,7 @@ export function Match() {
   const [sort, setSort] = useState('day');
   const [chosen, setChosen] = useState<Block | null>(null);
   const [invite, setInvite] = useState<Block | null>(null);
+  useEscape(() => setInvite(null), invite !== null);
 
   const valid = selected.filter(id => accessOf(id).schedule);
   const members = [me.id, ...valid];
@@ -208,7 +210,7 @@ export function Match() {
 
       {invite && (
         <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && setInvite(null)}>
-          <div className="modal">
+          <div className="modal" role="dialog" aria-modal="true" aria-label="Crear encuentro">
             <div className="modal-top">
               <h2>✨ Crear encuentro</h2>
               <button className="iconbutton" onClick={() => setInvite(null)} aria-label="Cerrar"><X size={20} /></button>
