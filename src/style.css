@@ -148,3 +148,8 @@
 .avail-block:hover{transform:scale(1.03);box-shadow:0 4px 12px rgba(17,24,39,.12);z-index:1}
 .avail-block.chosen{outline:3px solid #1f2937;outline-offset:1px;z-index:2}
 @media(max-width:700px){.avail{grid-template-columns:36px repeat(5,minmax(0,1fr));gap:4px;--avail-h:420px}.avail-block span{font-size:10px;padding:1px 4px}}
+
+/* ───────── Ahora en campus: puntos del carrusel ───────── */
+.now-dots{display:flex;justify-content:center;gap:6px;margin:2px 0 8px}
+.now-dots button{width:7px;height:7px;border-radius:99px;border:0;padding:0;background:#d6dbe3;transition:width .2s,background .2s}
+.now-dots button.on{width:20px;background:#e11b22}
