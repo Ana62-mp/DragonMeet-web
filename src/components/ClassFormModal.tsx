@@ -5,6 +5,7 @@ import { validateSlot } from '../domain/schedule.ts';
 import { fromMinutes, toMinutes } from '../domain/time.ts';
 import { days } from '../store';
 import type { Entry } from '../types';
+import { useEscape } from '../lib/useEscape';
 import { TimeWheelPicker } from './TimeWheelPicker.tsx';
 
 type Props = {
@@ -19,6 +20,7 @@ type Props = {
 
 /** Add/edit class dialog. Times are edited in minutes and stored back as decimal hours. */
 export function ClassFormModal({ entry, defaultDay, userId, siblings, onSave, onDelete, onClose }: Props) {
+  useEscape(onClose);
   const [startMin, setStartMin] = useState(entry ? toMinutes(entry.start) : 9 * 60);
   const [endMin, setEndMin] = useState(entry ? toMinutes(entry.end) : 10 * 60 + 30);
   const [error, setError] = useState('');
@@ -45,7 +47,7 @@ export function ClassFormModal({ entry, defaultDay, userId, siblings, onSave, on
 
   return (
     <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <div className="modal" role="dialog" aria-modal="true">
         <div className="modal-top">
           <h2>{entry ? 'Editar clase' : 'Agregar clase'}</h2>
           <button className="iconbutton" onClick={onClose} aria-label="Cerrar">

@@ -34,6 +34,19 @@ scripts/          seed-data.ts, seed-users.ts, build-seed-sql.ts
 6. **Datos de ejemplo:** pega `supabase/seed.sql` en el SQL Editor (horarios, amistades, permisos y zonas). Si cambias `scripts/seed-data.ts`, regenera con `npm run seed:sql`. Las zonas de presencia caducan a las 4 h: vuelve a ejecutar `seed.sql` para refrescarlas.
 7. **Local:** `npm run dev`.
 
+### Sin Supabase: backend local
+
+```bash
+npm install
+npm run dev:local
+```
+
+Levanta un Postgres en memoria con la **misma migración, el mismo seed y la misma seguridad por fila (RLS)** que
+Supabase (`scripts/local-db.ts`) y una imitación local de su API (`scripts/local-backend.ts`, puerto 54321), y abre
+la app en `http://localhost:5173` apuntando a ella. No necesita cuenta, Docker ni internet. **Todas** las cuentas de
+prueba entran con la contraseña `dragon123`. Los datos se reinician al cerrar. Es solo para desarrollo y demos locales:
+no se despliega.
+
 ## Cuentas de prueba
 
 | Persona | Correo | Contraseña |

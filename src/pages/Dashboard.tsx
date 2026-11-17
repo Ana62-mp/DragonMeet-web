@@ -4,12 +4,14 @@ import { Avatar } from '../components/Avatar';
 import { AvailableFriendsPanel } from '../components/AvailableFriendsPanel';
 import { Badge, Button } from '../components/ui';
 import { zoneLabel } from '../data/campus.ts';
+import { RESPONSE_LABEL, formatMeetDate } from '../domain/meet.ts';
 import { dayLoad, formatDuration } from '../domain/schedule.ts';
-import { DAY_END_MIN, DAY_START_MIN, fmt } from '../domain/time.ts';
+import { DAY_END_MIN, DAY_START_MIN, fmt, isUpcoming } from '../domain/time.ts';
 import { useFriends } from '../hooks/useFriends';
 import { useSchedule } from '../hooks/useSchedule';
 import { useClock } from '../lib/useClock';
-import { calculate, days, useApp } from '../store';
+import { days, useApp } from '../store';
+import { recommendMatch } from '../domain/recommend.ts';
 
 const QUICK_LINKS = [
   { Icon: CalendarDays, title: 'Mi horario', subtitle: 'Organiza tu semana', to: '/horarios', color: 'pink' },
@@ -20,6 +22,7 @@ const QUICK_LINKS = [
 export function Dashboard() {
   const me = useApp(s => s.me)!;
   const invites = useApp(s => s.invites);
+  const people = useApp(s => s.people);
   const { entries, allBusy } = useSchedule();
   const { friendIds, accessOf } = useFriends();
   const nav = useNavigate();
@@ -34,11 +37,17 @@ export function Dashboard() {
   const inWindow = !weekend && minutes >= DAY_START_MIN && minutes < DAY_END_MIN;
   const hoursLabel = (min: number) => `${+(min / 60).toFixed(1)} h`;
 
-  const peers = friendIds.filter(id => accessOf(id).schedule).slice(0, 2);
-  const upcoming = calculate(allBusy, [me.id, ...peers]).find(
-    m => m.status === 'all' && m.end - m.start >= 0.5 && (m.day > today || (m.day === today && m.start >= hour)),
-  );
-  const myInvites = invites.filter(i => i.owner === me.id || me.id in i.responses).slice(-3);
+  const upcoming = recommendMatch(allBusy, me.id, friendIds.filter(id => accessOf(id).schedule), { day: today, minutes });
+  const whenLabel = upcoming && (upcoming.now ? 'Ahora mismo'
+    : upcoming.day === today && !upcoming.nextWeek ? 'Hoy'
+    : upcoming.day === today + 1 && !upcoming.nextWeek ? 'Mañana'
+    : `${days[upcoming.day]}${upcoming.nextWeek ? ' (próxima semana)' : ''}`);
+  const together = upcoming ? upcoming.friends.map(id => people[id]?.firstName ?? 'Estudiante') : [];
+  const togetherLabel = together.length > 1 ? `${together.slice(0, -1).join(', ')} y ${together[together.length - 1]}` : together[0];
+  const myInvites = invites
+    .filter(i => !i.cancelled && i.responses[me.id] !== 'rejected' && (i.owner === me.id || me.id in i.responses) && isUpcoming(i.date, i.end))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start)
+    .slice(0, 3);
 
   return (
     <>
@@ -115,12 +124,12 @@ export function Dashboard() {
           {upcoming ? (
             <>
               <div className="match-avatars">
-                {[me.id, ...peers].map(id => <Avatar key={id} id={id} size={46} />)}
+                {[me.id, ...upcoming.friends].map(id => <Avatar key={id} id={id} size={46} />)}
               </div>
-              <h3>¡Tienen tiempo libre juntos!</h3>
-              <p>{days[upcoming.day]} · {fmt(upcoming.start)} – {fmt(upcoming.end)}</p>
-              <div className="match-duration"><Clock3 size={15} />{Math.round((upcoming.end - upcoming.start) * 60)} minutos para compartir</div>
-              <Button onClick={() => nav('/match')}>Explorar coincidencias <ArrowRight size={16} /></Button>
+              <h3>Tú y {togetherLabel} están libres</h3>
+              <p>{whenLabel} · {upcoming.now ? `hasta las ${fmt(upcoming.end)}` : `${fmt(upcoming.start)} – ${fmt(upcoming.end)}`}</p>
+              <div className="match-duration"><Clock3 size={15} />{formatDuration(Math.round((upcoming.end - upcoming.start) * 60))} para compartir</div>
+              <Button onClick={() => nav('/match', { state: { friends: upcoming.friends } })}>Ver en Match <ArrowRight size={16} /></Button>
             </>
           ) : (
             <div className="empty">
@@ -152,10 +161,10 @@ export function Dashboard() {
               <CalendarDays size={19} />
               <div>
                 <b>{i.title}</b>
-                <small>{i.date} · {fmt(i.start)} · {zoneLabel(i.zone)}</small>
+                <small>{formatMeetDate(i.date)} · {fmt(i.start)} · {zoneLabel(i.zone)}</small>
               </div>
-              <Badge tone={i.cancelled ? 'rose' : 'green'}>
-                {i.cancelled ? 'Cancelado' : i.owner === me.id ? 'Organizador' : i.responses[me.id]}
+              <Badge tone={i.owner === me.id || i.responses[me.id] === 'accepted' ? 'green' : 'gold'}>
+                {i.owner === me.id ? 'Organizador' : RESPONSE_LABEL[i.responses[me.id]]}
               </Badge>
             </div>
           ))}

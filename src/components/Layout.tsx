@@ -1,8 +1,9 @@
 import { useEffect, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Bell, CalendarDays, ChevronRight, HeartHandshake, Home, MapPinned, UserRound, Users } from 'lucide-react';
+import { CalendarDays, ChevronRight, HeartHandshake, Home, MapPinned, UserRound, Users } from 'lucide-react';
 import { useApp } from '../store';
 import { Avatar } from './Avatar';
+import { NotificationMenu } from './NotificationMenu';
 import { Badge, PageSkeleton, Toaster } from './ui';
 
 const links = [
@@ -91,10 +92,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
           <div className="topbar-actions">
             <Badge tone="rose">Prototipo académico</Badge>
-            <button className="iconbutton" onClick={() => nav('/amigos')} aria-label="Solicitudes">
-              <Bell size={20} />
-              {incoming > 0 && <span className="notif" />}
-            </button>
+            <NotificationMenu />
             <button className="avatar-button" onClick={() => nav('/perfil')} aria-label="Perfil">
               {me && <Avatar id={me.id} size={35} />}
             </button>
