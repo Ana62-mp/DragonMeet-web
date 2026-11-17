@@ -123,3 +123,14 @@
 .notif-icon{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#fff0f0;color:#e11b22;flex-shrink:0}
 .notif-links{display:flex;justify-content:space-between;border-top:1px solid #f1f2f4;padding-top:11px;margin-top:2px}
 @media(max-width:700px){.notif-panel{position:fixed;left:12px;right:12px;top:64px;width:auto}}
+
+/* ───────── Horario en celular: un día a la vez (los chips Lun…Vie eligen el día) ───────── */
+@media(max-width:700px){
+  .schedule-card{overflow-x:visible}
+  .schedule-grid{min-width:0;grid-template-columns:46px minmax(0,1fr)}
+  .schedule-grid .day-head.not-selected,.schedule-grid .schedule-column.not-selected{display:none}
+  .schedule-grid .day-head.today{font-size:14px}
+  .schedule-column.highlight{background:#fff}
+  .course-block{left:6px;right:6px;width:calc(100% - 12px);padding:7px 12px;gap:2px}
+  .course-block b{font-size:13px;line-height:1.25}.course-block span,.course-block small{font-size:11.5px;line-height:1.25}
+}
