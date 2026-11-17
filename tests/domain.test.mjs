@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { toMinutes, fromMinutes, fmt, parseTime, isValidRange, ecuadorNow, fromPgTime, toPgTime } from '../src/domain/time.ts';
+import { toMinutes, fromMinutes, fmt, parseTime, isValidRange, ecuadorNow, ecuadorDate, isUpcoming, nextDateFor, fromPgTime, toPgTime } from '../src/domain/time.ts';
 import { validateSlot, validateSlots } from '../src/domain/schedule.ts';
 import { CLASS_BUILDINGS, CAMPUS_ZONES, normalizeBuilding } from '../src/data/campus.ts';
 import { getFriendsOnCampusNow, groupFriendsByZone } from '../src/domain/availability.ts';
@@ -121,4 +121,18 @@ test('dayLoad sums class and free time in the 07:00-20:00 window without double 
   assert.equal(formatDuration(210), '3 h 30 min');
   assert.equal(formatDuration(120), '2 h');
   assert.equal(formatDuration(45), '45 min');
+});
+
+test('meet dates use the Ecuador calendar, not UTC', () => {
+  const mondayMorning = new Date('2026-11-16T15:00:00Z');      // Mon 10:00 in Ecuador
+  const mondayNight = new Date('2026-11-17T03:00:00Z');        // still Mon 22:00 in Ecuador, already Tue in UTC
+  assert.equal(ecuadorDate(mondayNight), '2026-11-16');
+  assert.equal(nextDateFor(0, 12, mondayMorning), '2026-11-16'); // today, block not started yet
+  assert.equal(nextDateFor(0, 9, mondayMorning), '2026-11-23');  // today's block already started -> next week
+  assert.equal(nextDateFor(4, 9, mondayMorning), '2026-11-20');  // Friday of this week
+  assert.equal(nextDateFor(0, 9, mondayNight), '2026-11-23');
+  assert.equal(isUpcoming('2026-11-16', 11, mondayMorning), true);
+  assert.equal(isUpcoming('2026-11-16', 9.5, mondayMorning), false);
+  assert.equal(isUpcoming('2026-11-15', 19, mondayMorning), false);
+  assert.equal(isUpcoming('2026-11-17', 8, mondayNight), true);
 });

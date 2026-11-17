@@ -1,26 +1,22 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ArrowRight, Clock3, HeartHandshake, Send, ShieldCheck, X } from 'lucide-react';
 import { Avatar, nameOf } from '../components/Avatar';
 import { Badge, Button, EmptyState, Heading } from '../components/ui';
 import { CAMPUS_ZONES } from '../data/campus.ts';
-import { fmt } from '../domain/time.ts';
+import { clashingMeet } from '../domain/meet.ts';
+import { ecuadorDate, fmt, isUpcoming, nextDateFor } from '../domain/time.ts';
 import { useFriends } from '../hooks/useFriends';
 import { useSchedule } from '../hooks/useSchedule';
 import { toast } from '../lib/toast';
+import { useEscape } from '../lib/useEscape';
 import { calculate, days, useApp } from '../store';
 
 type Block = ReturnType<typeof calculate>[number];
 
 const MAX_FRIENDS = 4;
 const MIN_BLOCK_HOURS = 0.5;
-
-/** Next calendar date (ISO) that falls on the given weekday (0 = Monday). */
-function nextDate(day: number) {
-  const d = new Date();
-  d.setHours(12, 0, 0, 0);
-  d.setDate(d.getDate() + ((day + 1 - d.getDay() + 7) % 7));
-  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-');
-}
+const HOURS = 13;   // 07:00-20:00, the window the engine works in
 
 const minutesOf = (hours: number) => Math.round(hours * 60);
 
@@ -28,14 +24,18 @@ export function Match() {
   const me = useApp(s => s.me)!;
   const people = useApp(s => s.people);
   const createInvite = useApp(s => s.createInvite);
+  const invites = useApp(s => s.invites);
   const { allBusy } = useSchedule();
   const { friends, accessOf } = useFriends();
-  const [selected, setSelected] = useState<string[]>([]);
+  // 'Ver en Match' from Inicio arrives with the recommended friends already picked.
+  const location = useLocation();
+  const [selected, setSelected] = useState<string[]>(() => ((location.state as { friends?: string[] } | null)?.friends ?? []).slice(0, MAX_FRIENDS));
   const [filter, setFilter] = useState('all');
   const [day, setDay] = useState(-1);
   const [sort, setSort] = useState('day');
   const [chosen, setChosen] = useState<Block | null>(null);
   const [invite, setInvite] = useState<Block | null>(null);
+  useEscape(() => setInvite(null), invite !== null);
 
   const valid = selected.filter(id => accessOf(id).schedule);
   const members = [me.id, ...valid];
@@ -53,6 +53,9 @@ export function Match() {
     const f = new FormData(e.currentTarget);
     const date = String(f.get('date'));
     if (new Date(`${date}T00:00:00`).getDay() !== invite.day + 1) return toast.error('La fecha debe corresponder al día de la coincidencia.');
+    if (!isUpcoming(date, invite.start)) return toast.error('Ese horario ya pasó. Elige otra fecha.');
+    const clash = clashingMeet(invites, me.id, date, invite.start, invite.end);
+    if (clash) return toast.error(`Ya tienes «${clash.title}» a esa hora. Elige otra fecha u horario.`);
     if (!invite.free.includes(me.id)) return toast.error('Debes estar libre en este horario para organizar un encuentro.');
     const ok = await createInvite(
       { title: String(f.get('title')), date, start: invite.start, end: invite.end, zone: String(f.get('zone')) },
@@ -120,29 +123,36 @@ export function Match() {
                 <span><i className="legend-dot yellow" /> Match parcial</span>
                 <span><i className="legend-dot red" /> Sin Match</span>
               </div>
-              <div className="matrix-scroll">
-                <div className="matrix">
-                  <div className="matrix-head">Hora</div>
-                  {days.map(d => <div className="matrix-head" key={d}>{d.slice(0, 3)}</div>)}
-                  {Array.from({ length: 52 }, (_, i) => (
-                    <React.Fragment key={i}>
-                      <div className="matrix-time">{i % 4 === 0 ? fmt(7 + i / 4) : ''}</div>
-                      {days.map((_, d) => {
-                        const t = 7 + i / 4;
-                        const b = blocks.find(x => x.day === d && x.start <= t && x.end > t)!;
-                        return (
-                          <button
-                            title={`${days[d]} ${fmt(t)}: ${b.free.length} de ${members.length} libres`}
-                            onClick={() => setChosen(b)}
-                            className={'matrix-cell ' + b.status}
-                            key={d}
-                            aria-label={`${days[d]} ${fmt(t)}: ${b.free.length} libres`}
-                          />
-                        );
-                      })}
-                    </React.Fragment>
+              {/* Calendar-style availability: one continuous block per stretch with the same people free. */}
+              <div className="avail">
+                <div className="avail-rail" aria-hidden="true">
+                  {Array.from({ length: HOURS + 1 }, (_, i) => (
+                    <span key={i} style={{ top: `${(i / HOURS) * 100}%` }}>{fmt(7 + i)}</span>
                   ))}
                 </div>
+                {days.map((d, di) => (
+                  <div className="avail-day" key={d}>
+                    <div className="avail-head">{d.slice(0, 3)}</div>
+                    <div className="avail-col">
+                      {Array.from({ length: HOURS - 1 }, (_, i) => <i key={i} className="avail-line" style={{ top: `${((i + 1) / HOURS) * 100}%` }} />)}
+                      {blocks.filter(b => b.day === di).map(b => {
+                        const tall = b.end - b.start >= 0.75;
+                        return (
+                          <button
+                            key={b.start}
+                            className={`avail-block ${b.status}${chosen && chosen.day === b.day && chosen.start === b.start ? ' chosen' : ''}`}
+                            style={{ top: `${((b.start - 7) / HOURS) * 100}%`, height: `${((b.end - b.start) / HOURS) * 100}%` }}
+                            onClick={() => setChosen(b)}
+                            title={`${d} ${fmt(b.start)}–${fmt(b.end)}: ${b.free.length} de ${members.length} libres`}
+                            aria-label={`${d} de ${fmt(b.start)} a ${fmt(b.end)}: ${b.free.length} de ${members.length} libres`}
+                          >
+                            {tall && b.status !== 'none' && <span>{b.free.length}/{members.length}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
               {chosen && (
                 <div className="selection-detail">
@@ -208,7 +218,7 @@ export function Match() {
 
       {invite && (
         <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && setInvite(null)}>
-          <div className="modal">
+          <div className="modal" role="dialog" aria-modal="true" aria-label="Crear encuentro">
             <div className="modal-top">
               <h2>✨ Crear encuentro</h2>
               <button className="iconbutton" onClick={() => setInvite(null)} aria-label="Cerrar"><X size={20} /></button>
@@ -216,7 +226,7 @@ export function Match() {
             <p className="muted">{days[invite.day]} · {fmt(invite.start)}–{fmt(invite.end)} · {invite.free.length} participantes libres</p>
             <form className="form" onSubmit={submitInvite}>
               <label>Nombre del encuentro<input name="title" required placeholder="Almuerzo con amigos" /></label>
-              <label>Fecha<input type="date" name="date" min={new Date().toISOString().slice(0, 10)} defaultValue={nextDate(invite.day)} required /></label>
+              <label>Fecha<input type="date" name="date" min={ecuadorDate()} defaultValue={nextDateFor(invite.day, invite.start)} required /></label>
               <label>Lugar
                 <select name="zone">
                   {CAMPUS_ZONES.map(z => <option key={z.id} value={z.id}>{z.label}</option>)}

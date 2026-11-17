@@ -1,16 +1,20 @@
 import { useState } from 'react';
-import { CalendarPlus, Check, GraduationCap, Hash, LogOut, Mail, Settings2, ShieldCheck, X } from 'lucide-react';
-import { Avatar, PersonAvatar } from '../components/Avatar';
+import { useSearchParams } from 'react-router-dom';
+import { CalendarArrowDown as CalendarDown, CalendarPlus, Check, GraduationCap, Hash, LogOut, Mail, Settings2, ShieldCheck, X } from 'lucide-react';
+import { Avatar, PersonAvatar, nameOf } from '../components/Avatar';
 import { Badge, Button, EmptyState, Segmented, Toggle } from '../components/ui';
 import { CAREERS } from '../data/campus.ts';
-import { ecuadorNow, formatMinutes, fmt, parseTime } from '../domain/time.ts';
+import { ecuadorNow, formatMinutes, fmt, isUpcoming, parseTime } from '../domain/time.ts';
+import { RESPONSE_LABEL, formatMeetDate, meetToIcs } from '../domain/meet.ts';
+import { downloadText } from '../lib/download';
 import { useFriends } from '../hooks/useFriends';
 import { useSimulatedClock } from '../lib/useClock';
 import { zoneLabel } from '../data/campus.ts';
 import { days, useApp } from '../store';
-import type { Me, ScheduleDisclosure } from '../types';
+import type { Invite, Me, ScheduleDisclosure } from '../types';
 
 type Tab = 'privacy' | 'friends' | 'meets' | 'prefs';
+const TABS: Tab[] = ['privacy', 'friends', 'meets', 'prefs'];
 
 const COLORS = ['#E11B22', '#8B5CF6', '#3B82F6', '#EC4899', '#F97316', '#10B981', '#0EA5E9', '#EAB308'];
 
@@ -82,30 +86,74 @@ function PermSwitch({ label, value, onChange }: { label: string; value: boolean;
   );
 }
 
-function MeetsTab({ me }: { me: Me }) {
-  const invites = useApp(s => s.invites);
+function MeetRow({ invite: i, me }: { invite: Invite; me: Me }) {
+  const people = useApp(s => s.people);
   const respondInvite = useApp(s => s.respondInvite);
   const cancelInvite = useApp(s => s.cancelInvite);
-  const mine = invites.filter(i => i.owner === me.id || me.id in i.responses);
+  const owner = i.owner === me.id;
+  const mine = i.responses[me.id];
+  const going = !i.cancelled && (owner || mine === 'accepted');
+  const upcoming = isUpcoming(i.date, i.end);
+  const status = i.cancelled ? 'Cancelado' : owner ? 'Organizas este encuentro' : `Tu respuesta: ${RESPONSE_LABEL[mine]}`;
+  const invitees = Object.entries(i.responses);
+
+  return (
+    <div className={'invitation-row meet-row' + (upcoming ? '' : ' past')}>
+      <CalendarPlus size={20} />
+      <div>
+        <b>{i.title}</b>
+        <small>{formatMeetDate(i.date)} · {fmt(i.start)}–{fmt(i.end)} · {zoneLabel(i.zone)}</small>
+        <small>{status}{!owner && ` · organiza ${nameOf(people[i.owner])}`}</small>
+        {owner && invitees.length > 0 && (
+          <div className="person-chips meet-chips">
+            {invitees.map(([id, response]) => (
+              <Badge key={id} tone={response === 'accepted' ? 'green' : response === 'rejected' ? 'rose' : undefined}>
+                {nameOf(people[id])}: {RESPONSE_LABEL[response]}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+      {upcoming && !i.cancelled && !owner && mine === 'pending' && (
+        <div className="inline-actions">
+          <button onClick={() => respondInvite(i.id, true)} aria-label="Aceptar"><Check size={17} /></button>
+          <button onClick={() => respondInvite(i.id, false)} aria-label="Rechazar"><X size={17} /></button>
+        </div>
+      )}
+      {upcoming && going && (
+        <div className="meet-actions">
+          <button
+            className="smallbutton"
+            onClick={() => downloadText(`encuentro-${i.date}.ics`, meetToIcs(i, zoneLabel(i.zone)), 'text/calendar')}
+            aria-label={`Agregar «${i.title}» a mi calendario`}
+          >
+            <CalendarDown size={13} /> Calendario
+          </button>
+          {owner && <button className="smallbutton" onClick={() => cancelInvite(i.id)}>Cancelar</button>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MeetsTab({ me }: { me: Me }) {
+  const invites = useApp(s => s.invites);
+  const mine = invites
+    .filter(i => i.owner === me.id || me.id in i.responses)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start);
+  const upcoming = mine.filter(i => isUpcoming(i.date, i.end));
+  const past = mine.filter(i => !isUpcoming(i.date, i.end)).reverse();
+  if (!mine.length) return <section className="panel"><EmptyState icon={<CalendarPlus size={28} />} title="Sin encuentros todavía" text="Crea uno desde Match." /></section>;
   return (
     <section className="panel">
-      {mine.length ? mine.map(i => (
-        <div className="invitation-row" key={i.id}>
-          <CalendarPlus size={20} />
-          <div>
-            <b>{i.title}</b>
-            <small>{days[i.day]} {i.date} · {fmt(i.start)}–{fmt(i.end)} · {zoneLabel(i.zone)}</small>
-            <small>{i.cancelled ? 'Cancelado' : i.owner === me.id ? 'Organizas este encuentro' : i.responses[me.id]}</small>
-          </div>
-          {!i.cancelled && i.owner !== me.id && i.responses[me.id] === 'pending' && (
-            <div className="inline-actions">
-              <button onClick={() => respondInvite(i.id, true)} aria-label="Aceptar"><Check size={17} /></button>
-              <button onClick={() => respondInvite(i.id, false)} aria-label="Rechazar"><X size={17} /></button>
-            </div>
-          )}
-          {i.owner === me.id && !i.cancelled && <button className="smallbutton" onClick={() => cancelInvite(i.id)}>Cancelar</button>}
-        </div>
-      )) : <EmptyState icon={<CalendarPlus size={28} />} title="Sin encuentros todavía" text="Crea uno desde Match." />}
+      <h3 className="meet-group">Próximos</h3>
+      {upcoming.length ? upcoming.map(i => <MeetRow key={i.id} invite={i} me={me} />) : <p className="muted small">No tienes encuentros próximos. Crea uno desde Match.</p>}
+      {past.length > 0 && (
+        <details className="meet-past">
+          <summary>Pasados ({past.length})</summary>
+          {past.map(i => <MeetRow key={i.id} invite={i} me={me} />)}
+        </details>
+      )}
     </section>
   );
 }
@@ -184,7 +232,10 @@ export function Profile() {
   const me = useApp(s => s.me)!;
   const signOut = useApp(s => s.signOut);
   const incoming = useApp(s => s.invites.filter(i => !i.cancelled && i.responses[s.me?.id ?? ''] === 'pending').length);
-  const [tab, setTab] = useState<Tab>('privacy');
+  // The tab lives in the URL (?tab=meets) so the notification bell can open it directly.
+  const [params, setParams] = useSearchParams();
+  const tab: Tab = TABS.includes(params.get('tab') as Tab) ? (params.get('tab') as Tab) : 'privacy';
+  const setTab = (next: Tab) => setParams(next === 'privacy' ? {} : { tab: next }, { replace: true });
 
   return (
     <>
