@@ -10,7 +10,9 @@
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "lint": "eslint .",
     "seed:sql": "node --experimental-strip-types scripts/build-seed-sql.ts",
-    "seed:users": "node --env-file=.env.local --experimental-strip-types scripts/seed-users.ts"
+    "seed:users": "node --env-file=.env.local --experimental-strip-types scripts/seed-users.ts",
+    "dev:local": "node --experimental-strip-types scripts/local-backend.ts --with-vite",
+    "backend:local": "node --experimental-strip-types scripts/local-backend.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

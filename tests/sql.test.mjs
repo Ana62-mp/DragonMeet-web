@@ -1,45 +1,23 @@
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { PGlite } from '@electric-sql/pglite';
-import { unaccent } from '@electric-sql/pglite/contrib/unaccent';
 import { people } from '../scripts/seed-data.ts';
+import { createLocalDb } from '../scripts/local-db.ts';
 
 /** Runs the real migration and seed on an in-memory Postgres with a minimal Supabase stub
- * (auth.users, auth.uid(), anon/authenticated roles) and checks the privacy rules at the database level.
+ * (scripts/local-db.ts) and checks the privacy rules at the database level.
  */
-const db = new PGlite({ extensions: { unaccent } });
-const ids = {};
-const sql = file => readFileSync(new URL(`../supabase/${file}`, import.meta.url), 'utf8');
-
-async function as(key, fn) {
-  await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${ids[key]}', false)`);
-  try { return await fn(); } finally { await db.exec('reset role'); }
-}
+let db, ids, local;
+const as = (key, fn) => local.as(ids[key], fn);
 const rows = async (query, params) => (await db.query(query, params)).rows;
 const denied = async promise => { await assert.rejects(promise, /permission denied|row-level security|violates|superpone|Solicitud|check/i); };
 
 before(async () => {
-  await db.exec(`
-    create schema auth; create schema extensions;
-    create table auth.users (id uuid primary key default gen_random_uuid(), email text unique, raw_user_meta_data jsonb);
-    create role anon nologin; create role authenticated nologin;
-    create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
-    grant usage on schema auth, extensions, public to anon, authenticated;
-    grant execute on function auth.uid() to anon, authenticated;
-    create extension unaccent with schema extensions;
-    grant execute on all functions in schema extensions to authenticated;`);
-  await db.exec(sql('migrations/001_schema.sql'));
-  for (const p of people) {
-    const meta = JSON.stringify({ full_name: p.fullName, first_name: p.firstName, banner_code: p.banner, career: p.career, semester: p.semester, avatar_color: p.color });
-    const [{ id }] = await rows('insert into auth.users (email, raw_user_meta_data) values ($1, $2) returning id', [p.email, meta]);
-    ids[p.key] = id;
-  }
-  await db.exec(sql('seed.sql'));
+  local = await createLocalDb();
+  ({ db, ids } = local);
 });
 
 test('migration is re-runnable and the trigger created one profile per auth user', async () => {
-  await db.exec(sql('migrations/001_schema.sql'));
+  await local.migrate();
   assert.equal((await rows('select count(*)::int n from public.profiles'))[0].n, people.length);
 });
 
