@@ -1,0 +1,89 @@
+/* ═════════ DragonMeet · Animaciones ═════════
+   Criterio: un solo momento protagonista al cargar (el hero de Inicio)
+   y el resto responde a lo que hace el usuario (elegir, abrir, confirmar). */
+
+:root{--dm-spring:cubic-bezier(.3,1.5,.5,1);--dm-out:cubic-bezier(.2,.7,.2,1)}
+
+/* Cambio de página: breve y discreto */
+.page{animation:dm-page .28s var(--dm-out) backwards}
+@keyframes dm-page{from{opacity:0;transform:translateY(6px)}}
+
+/* ── 1. Hero de Inicio: los amigos "entran en órbita" alrededor del ✦ ── */
+.hero::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,#ffffff1f 50%,transparent 65%);transform:translateX(-100%);animation:dm-sheen 1.6s .3s var(--dm-out) forwards;pointer-events:none}
+@keyframes dm-sheen{to{transform:translateX(100%)}}
+
+.hero h1 span{display:inline-block;transform-origin:70% 80%;animation:dm-wave 1.3s .7s ease-in-out}
+@keyframes dm-wave{0%,100%{transform:rotate(0)}15%,45%{transform:rotate(16deg)}30%,60%{transform:rotate(-8deg)}}
+
+.hero-circle{animation:dm-circle-in .7s .1s var(--dm-out) both}
+.hero-circle::before{content:'';position:absolute;inset:-14px;border-radius:50%;border:1px dashed #ffffff40;animation:dm-spin 45s linear infinite}
+@keyframes dm-circle-in{from{opacity:0;transform:scale(.7) rotate(-40deg)}}
+@keyframes dm-spin{to{transform:rotate(360deg)}}
+
+.orbit{animation:dm-orbit-in .75s var(--dm-spring) both,dm-float 6s ease-in-out infinite}
+.orbit-one{--ox:70px;--oy:60px;animation-delay:.35s,1.1s}
+.orbit-two{--ox:-70px;--oy:20px;animation-delay:.5s,1.9s;animation-duration:.75s,7s}
+.orbit-three{--ox:20px;--oy:-60px;animation-delay:.65s,1.4s;animation-duration:.75s,5.5s}
+@keyframes dm-orbit-in{from{opacity:0;transform:translate(var(--ox),var(--oy)) scale(.3)}}
+@keyframes dm-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+.hero-mini{animation:dm-pop-in .45s 1s var(--dm-spring) both}
+@keyframes dm-pop-in{from{opacity:0;transform:scale(.6)}}
+
+.hero-button{transition:transform .2s var(--dm-out),box-shadow .2s}
+.hero-button:hover{transform:translateY(-2px);box-shadow:0 12px 26px #5c000a40}
+.hero-button svg{transition:transform .2s var(--dm-out)}
+.hero-button:hover svg{transform:translateX(4px)}
+
+/* ── 2. Match: la matriz se "barre" de lunes a viernes al elegir amigos ── */
+.matrix>:nth-child(6n+2){--d:0ms}.matrix>:nth-child(6n+3){--d:45ms}.matrix>:nth-child(6n+4){--d:90ms}
+.matrix>:nth-child(6n+5){--d:135ms}.matrix>:nth-child(6n+6){--d:180ms}
+.matrix-cell{transition:background-color .4s ease var(--d,0ms),transform .12s;animation:dm-cell .45s var(--dm-out) var(--d,0ms) backwards}
+.matrix-cell:hover{transform:scale(1.18)}
+@keyframes dm-cell{from{opacity:0;transform:scaleY(.2)}}
+
+.participant.selectable{transition:background .2s,border-color .2s,transform .15s}
+.participant.selectable:not(:disabled):active{transform:scale(.98)}
+.checkcircle{transition:background .2s,border-color .2s}
+.checkcircle.checked{animation:dm-check .35s var(--dm-spring)}
+@keyframes dm-check{from{transform:scale(.4)}}
+
+.selection-detail{animation:dm-rise .25s var(--dm-out)}
+.result-card{animation:dm-rise .35s var(--dm-out) backwards;transition:transform .2s,border-color .2s,box-shadow .2s}
+.result-card:nth-child(2){animation-delay:.04s}.result-card:nth-child(3){animation-delay:.08s}
+.result-card:nth-child(4){animation-delay:.12s}.result-card:nth-child(5){animation-delay:.16s}.result-card:nth-child(n+6){animation-delay:.2s}
+.result-card:hover{transform:translateY(-2px);border-color:#f4c4c6;box-shadow:0 10px 24px #e11b2212}
+@keyframes dm-rise{from{opacity:0;transform:translateY(10px)}}
+
+/* ── 3. Respuestas a acciones ── */
+.btn:active,.outline-action:active,.smallbutton:active,.quick:active{transform:scale(.97)}
+.toggle span{transition:transform .35s var(--dm-spring)}
+.segmented button{transition:background .2s,color .2s,box-shadow .2s}
+.day-chips button{transition:background .2s,color .2s,border-color .2s}
+
+.modal-backdrop{animation:dm-fade .2s ease both}
+.modal{animation:dm-modal .3s var(--dm-spring) both}
+@keyframes dm-fade{from{opacity:0}}
+@keyframes dm-modal{from{opacity:0;transform:translateY(16px) scale(.96)}}
+
+.navlink{transition:background .2s,color .2s}
+.navlink svg{transition:transform .2s var(--dm-out)}
+.navlink:hover svg{transform:translateX(2px)}
+.mobile-nav a.selected svg{animation:dm-tap .35s var(--dm-spring)}
+@keyframes dm-tap{50%{transform:translateY(-3px) scale(1.12)}}
+
+.notif{animation:dm-ping 2.2s ease-out infinite}
+@keyframes dm-ping{0%{box-shadow:0 0 0 0 #e11b2266}70%,100%{box-shadow:0 0 0 7px #e11b2200}}
+
+.course-block:not(.static){transition:transform .15s,box-shadow .15s}
+.course-block:not(.static):hover{transform:translateY(-1px);box-shadow:0 6px 14px #23202012;z-index:2}
+.schedule-column.highlight{transition:background .3s}
+
+/* Foco visible con teclado */
+:where(button,a,select,input):focus-visible{outline:2px solid #e11b22;outline-offset:2px}
+
+/* Respeta "reducir movimiento" del sistema */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;animation-delay:0ms!important;transition-delay:0ms!important}
+  .hero::after,.hero-circle::before{display:none}
+}
