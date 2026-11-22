@@ -28,8 +28,11 @@ fictitious. Team: **Ana** (Ana62-mp, repository owner), **Vale** (valenparedes) 
   movement history.
 - **Real, never fake.** The app shows only what is true in the database. No invented features presented as real (the
   photo import says "demo"); no mock data in the client (`src/store.ts` loads everything from Supabase).
-- **Discarded on purpose:** the AI chatbot (branch `Xebax_LCF`) is out of scope (team decision, 2026-11-16). Do not
-  bring it back or build on it without the team asking.
+- **AI assistant "Dragón" (in scope since 2026-11-22):** the chatbot from branch `Xebax_LCF` was accepted and merged
+  into `main` (earlier it was discarded, 2026-11-16; the team reversed that). Server side only: `api/chat.ts` holds
+  `ANTHROPIC_API_KEY` (never a `VITE_` prefix) and only answers signed-in users. It may use only the data the user is
+  already allowed to see (`src/lib/chatContext.ts`); it must never receive another student's private data and never
+  invent classes, times or friends. The README still says "sin IA real" about the photo import: that import remains a demo.
 - **Rules apart from screens.** Time, schedule and availability rules live in `src/domain/` and `src/engine.ts` as
   pure functions with tests; Supabase access lives only in `src/services/`; pages only draw.
 - **Ecuador time.** Every date and hour a user sees or picks is Ecuador's (`America/Guayaquil`), via the helpers in

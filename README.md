@@ -2,7 +2,7 @@
 
 **Match your time. Find your people.**
 
-Prototipo académico web (mobile-first) para encontrar ventanas libres en común entre amigos universitarios del campus Cumbayá. **No es una app oficial de USFQ**: no usa Microsoft 365, Banner, GPS ni IA real. Los datos de las cuentas de prueba son ficticios.
+Prototipo académico web (mobile-first) para encontrar ventanas libres en común entre amigos universitarios del campus Cumbayá. **No es una app oficial de USFQ**: no usa Microsoft 365, Banner ni GPS. Incluye el asistente «Dragón» (IA, vía función de servidor); la importación de foto sigue siendo una demo. Los datos de las cuentas de prueba son ficticios.
 
 ## Stack
 
