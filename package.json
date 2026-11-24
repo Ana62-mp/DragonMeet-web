@@ -20,6 +20,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.1",
+    "three": "^0.169.0",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
@@ -28,6 +29,7 @@
     "@tailwindcss/vite": "^4.0.6",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@types/three": "^0.169.0",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",

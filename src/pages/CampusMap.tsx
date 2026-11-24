@@ -1,14 +1,26 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { LockKeyhole, MapPin } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 import { CampusSvgMap } from '../components/CampusSvgMap';
-import { Badge, Button, Heading, Toggle } from '../components/ui';
+import { Badge, Button, Heading, Segmented, Toggle } from '../components/ui';
 import { CAMPUS_ZONES, zoneLabel } from '../data/campus.ts';
 import { groupFriendsByZone, isPresenceFresh } from '../domain/availability.ts';
 import { useFriends } from '../hooks/useFriends';
 import { useClock } from '../lib/useClock';
 import { useApp } from '../store';
 import type { Person } from '../types';
+
+// three.js only downloads when the 3D view is actually shown.
+const CampusMap3D = lazy(() => import('../components/CampusMap3D'));
+
+function hasWebGL() {
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
 
 export function CampusMap() {
   const me = useApp(s => s.me)!;
@@ -20,6 +32,7 @@ export function CampusMap() {
   const clock = useClock();
   const [active, setActive] = useState('biblioteca');
   const [choice, setChoice] = useState<string | null>(null);
+  const [view, setView] = useState<'3d' | '2d'>(() => (hasWebGL() ? '3d' : '2d'));
 
   const byZone = groupFriendsByZone(friendIds, Object.fromEntries(friendIds.map(id => [id, accessOf(id)])), zones, clock.ts);
   const friendsByZone = Object.fromEntries(
@@ -38,13 +51,21 @@ export function CampusMap() {
         <div className="panel map-panel">
           <div className="panel-top">
             <h2>Campus Cumbayá</h2>
-            <Badge tone="purple">Mapa ilustrativo</Badge>
+            <Segmented<'3d' | '2d'> value={view} onChange={setView} options={[{ id: '3d', label: '3D' }, { id: '2d', label: '2D' }]} />
           </div>
-          <div className="map-graphic">
-            <CampusSvgMap active={active} selfZone={hasFreshZone ? me.zone : null} friendsByZone={friendsByZone} onSelect={setActive} />
-          </div>
+          {view === '3d' ? (
+            <Suspense fallback={<div className="map3d map3d-loading">Cargando campus 3D…</div>}>
+              <CampusMap3D active={active} selfZone={hasFreshZone ? me.zone : null} friendsByZone={friendsByZone} onSelect={setActive} />
+            </Suspense>
+          ) : (
+            <div className="map-graphic">
+              <CampusSvgMap active={active} selfZone={hasFreshZone ? me.zone : null} friendsByZone={friendsByZone} onSelect={setActive} />
+            </div>
+          )}
           <p className="subtle-note">
-            <MapPin size={16} /> Mapa ilustrativo de referencia · No es ubicación GPS ni plano oficial interactivo
+            <MapPin size={16} /> {view === '3d'
+              ? 'Modelo ilustrativo basado en el mapa del campus de Noticias USFQ (2012) · arrastra para girar, toca un edificio'
+              : 'Mapa ilustrativo de referencia'} · No es ubicación GPS ni plano oficial
           </p>
         </div>
         <div className="map-side">
