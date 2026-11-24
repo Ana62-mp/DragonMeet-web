@@ -153,3 +153,47 @@
 .now-dots{display:flex;justify-content:center;gap:6px;margin:2px 0 8px}
 .now-dots button{width:7px;height:7px;border-radius:99px;border:0;padding:0;background:#d6dbe3;transition:width .2s,background .2s}
 .now-dots button.on{width:20px;background:#e11b22}
+
+/* ───────── Dragon Map 3D ───────── */
+.map3d{position:relative;height:460px;border-radius:15px;overflow:hidden;background:#eef3f8;touch-action:none}
+.map3d canvas{display:block;width:100%;height:100%}
+.map3d-loading{display:grid;place-items:center;color:#7d8491;font-size:13px;font-weight:700}
+.map3d-labels{position:absolute;inset:0;pointer-events:none;z-index:1}
+.map3d-tag{pointer-events:auto;border:0;border-radius:99px;background:rgba(255,255,255,.9);color:#2b2f36;font:800 10px 'DM Sans',sans-serif;padding:3px 8px;box-shadow:0 2px 8px rgba(17,24,39,.15);cursor:pointer;white-space:nowrap}
+.map3d-tag.open{background:rgba(236,246,232,.92);color:#3f6b3a;font-style:italic}.map3d-tag.on{background:#e11b22;color:#fff;font-style:normal;z-index:1}
+.map3d-chip{display:flex;align-items:center;gap:3px;padding:3px;border-radius:99px;background:#fff;box-shadow:0 4px 14px rgba(17,24,39,.22);font:800 10px 'DM Sans',sans-serif;animation:map3d-bob 2s ease-in-out infinite}
+.map3d-chip span{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:#fff}
+.map3d-chip span.more{background:#6b7280}
+.map3d-chip.self{background:#e11b22;color:#fff;padding-left:9px}
+@keyframes map3d-bob{50%{transform:translateY(-4px)}}
+@media(max-width:700px){.map3d{height:380px}.map3d-tag{font-size:10px;padding:3px 7px}.map3d-tag:not(.on){display:none}}
+
+/* ───────── Gastón, la mascota ───────── */
+.gaston{position:fixed;right:92px;bottom:10px;width:128px;z-index:45;display:flex;flex-direction:column;align-items:flex-end;pointer-events:none}
+.gaston-stage{width:128px;height:128px;border:0;padding:0;background:transparent;cursor:pointer;pointer-events:auto;filter:drop-shadow(0 8px 14px rgba(17,24,39,.12))}
+.gaston-stage canvas{display:block}
+.gaston-close{position:absolute;top:auto;bottom:104px;right:2px;width:20px;height:20px;border-radius:50%;border:0;background:rgba(255,255,255,.9);color:#7b8290;display:grid;place-items:center;pointer-events:auto;opacity:0;transition:opacity .2s;box-shadow:0 2px 6px rgba(17,24,39,.15)}
+.gaston:hover .gaston-close,.gaston:focus-within .gaston-close{opacity:1}
+.gaston-bubble{position:relative;margin-bottom:-6px;max-width:220px;background:#fff;color:#231f20;font:700 12px 'DM Sans',sans-serif;padding:9px 12px;border-radius:14px;box-shadow:0 8px 24px rgba(17,24,39,.15);animation:gaston-pop .25s ease-out;pointer-events:auto}
+.gaston-bubble:after{content:'';position:absolute;right:46px;bottom:-6px;border:7px solid transparent;border-top-color:#fff;border-bottom:0}
+.gaston-zzz{position:absolute;right:18px;bottom:110px;font:800 16px 'Plus Jakarta Sans',sans-serif;color:#8b95a8;animation:gaston-zzz 2.4s ease-in-out infinite}
+.gaston-zzz b{font-size:12px;margin-left:2px}.gaston-zzz i{font-style:normal;font-size:9px;margin-left:2px}
+.gaston-peek{position:fixed;right:96px;bottom:32px;z-index:45;width:42px;height:42px;border-radius:50%;border:0;background:#fff;box-shadow:0 6px 18px rgba(17,24,39,.15);font-size:22px}
+@keyframes gaston-pop{from{transform:scale(.7) translateY(6px);opacity:0}}
+@keyframes gaston-zzz{50%{transform:translate(4px,-6px);opacity:.6}}
+@media(max-width:700px){.gaston{right:70px;bottom:calc(76px + env(safe-area-inset-bottom));width:92px}.gaston-stage{width:92px;height:92px}.gaston-close{bottom:72px}.gaston-peek{bottom:calc(90px + env(safe-area-inset-bottom));right:76px}.gaston-bubble{max-width:180px;font-size:11px}}
+@media(prefers-reduced-motion:reduce){.gaston-bubble,.gaston-zzz{animation:none}}
+
+/* ───────── Dragon Map 3D: orientación ───────── */
+.map3d-street{font:800 10px 'DM Sans',sans-serif;color:#4b5563;background:rgba(255,255,255,.75);padding:2px 7px;border-radius:6px;letter-spacing:.04em;white-space:nowrap;pointer-events:none}
+.map3d-landmark{font:700 9.5px 'DM Sans',sans-serif;color:#6b7280;background:rgba(255,255,255,.7);padding:2px 6px;border-radius:6px;white-space:nowrap;pointer-events:none}
+.map3d-compass{position:absolute;top:12px;left:12px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 4px 12px rgba(17,24,39,.15);display:grid;place-items:center;z-index:3}
+.map3d-compass>div{display:flex;flex-direction:column;align-items:center;line-height:1;color:#e11b22;transition:transform .05s linear}
+.map3d-compass span{font:900 10px 'DM Sans',sans-serif;margin-bottom:-2px}
+.map3d-controls{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:3}
+.map3d-controls button{width:34px;height:34px;border:0;border-radius:10px;background:rgba(255,255,255,.92);color:#374151;display:grid;place-items:center;box-shadow:0 4px 12px rgba(17,24,39,.15)}
+.map3d-controls button:hover{background:#fff;color:#e11b22}
+.map3d-hint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:rgba(17,24,39,.75);color:#fff;font:700 11px 'DM Sans',sans-serif;padding:6px 12px;border-radius:99px;white-space:nowrap;z-index:2;pointer-events:none}
+@media(max-width:700px){.map3d-landmark,.map3d-street{font-size:8.5px}.map3d-hint{font-size:10px}}
+
+.gaston-mute{right:26px}
