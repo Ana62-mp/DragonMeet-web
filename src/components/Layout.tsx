@@ -1,4 +1,5 @@
-import { useEffect, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
+import { useMascot } from '../lib/mascot';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { CalendarDays, ChevronRight, HeartHandshake, Home, MapPinned, UserRound, Users } from 'lucide-react';
 import { useApp } from '../store';
@@ -46,6 +47,9 @@ function useAutoRefresh() {
   }, [refresh]);
 }
 
+// Gastón shares the three.js chunk with the 3D map and loads after the page.
+const Gaston = lazy(() => import('./Gaston'));
+
 export function Layout({ children }: { children: ReactNode }) {
   const me = useApp(s => s.me);
   const loaded = useApp(s => s.loaded);
@@ -55,6 +59,9 @@ export function Layout({ children }: { children: ReactNode }) {
   const nav = useNavigate();
   const { pathname } = useLocation();
   useAutoRefresh();
+  const firstName = me?.firstName;
+  const react = useMascot(s => s.react);
+  useEffect(() => { if (firstName) react('wave', `¡Hola, ${firstName}! Soy Gastón`); }, [firstName, react]);
 
   return (
     <div className="layout">
@@ -120,6 +127,7 @@ export function Layout({ children }: { children: ReactNode }) {
         ))}
       </nav>
       {loaded && <ChatBot />}
+      {loaded && <Suspense fallback={null}><Gaston /></Suspense>}
       <Toaster />
     </div>
   );

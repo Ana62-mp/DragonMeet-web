@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import type { VisibleEntry } from './domain/visibility.ts';
 import { supabase } from './lib/supabase';
 import { toast } from './lib/toast';
+import { mascotForMessage, mascotOops } from './lib/mascot';
 import * as friendsApi from './services/friends';
 import * as invitesApi from './services/invites';
 import * as profilesApi from './services/profiles';
@@ -80,10 +81,11 @@ export const useApp = create<AppState>((set, get) => {
     try {
       await write();
       await get().refresh();
-      if (success) toast.success(success);
+      if (success) { toast.success(success); mascotForMessage(success); }
       return true;
     } catch (error) {
       toast.error(messageOf(error));
+      mascotOops();
       return false;
     }
   }
@@ -142,7 +144,9 @@ export const useApp = create<AppState>((set, get) => {
     sendRequest: async to => {
       await attempt(async () => {
         const result = await friendsApi.sendRequest(to);
-        toast.success(result === 'accepted' ? '¡Ya son amigos!' : 'Solicitud enviada');
+        const message = result === 'accepted' ? '¡Ya son amigos!' : 'Solicitud enviada';
+        toast.success(message);
+        mascotForMessage(message);
       });
     },
     respondRequest: async (id, accept) => { await attempt(() => friendsApi.respondRequest(id, accept), accept ? 'Solicitud aceptada' : 'Solicitud rechazada'); },
