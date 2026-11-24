@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ArrowRight, Clock3, HeartHandshake, Send, ShieldCheck, X } from 'lucide-react';
 import { Avatar, nameOf } from '../components/Avatar';
@@ -10,6 +10,7 @@ import { useFriends } from '../hooks/useFriends';
 import { useSchedule } from '../hooks/useSchedule';
 import { toast } from '../lib/toast';
 import { useEscape } from '../lib/useEscape';
+import { useMascot } from '../lib/mascot';
 import { calculate, days, useApp } from '../store';
 
 type Block = ReturnType<typeof calculate>[number];
@@ -46,6 +47,16 @@ export function Match() {
       && (filter === 'all' || b.status === (filter === 'all-match' ? 'all' : filter)) && (day < 0 || day === b.day))
     .sort((a, b) => sort === 'duration' ? b.end - b.start - (a.end - a.start) : sort === 'people' ? b.free.length - a.free.length : a.day - b.day || a.start - b.start)
     .slice(0, 18);
+
+  // Gastón cheers when the chosen group has a perfect match (and is sad when nobody coincides).
+  const react = useMascot(s => s.react);
+  const groupKey = valid.join('|');
+  const perfect = blocks.filter(b => b.status === 'all' && b.end - b.start >= MIN_BLOCK_HOURS).length;
+  useEffect(() => {
+    if (!groupKey) return;
+    if (perfect > 0) react('happy', `¡${perfect} ${perfect === 1 ? 'match perfecto' : 'matches perfectos'}! 🐷`);
+    else react('sad', 'No coinciden esta semana…');
+  }, [groupKey, perfect, react]);
 
   async function submitInvite(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
