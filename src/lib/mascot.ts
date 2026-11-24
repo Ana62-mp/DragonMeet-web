@@ -9,17 +9,27 @@ type MascotState = {
   /** Increments on every reaction so the same mood can replay. */
   beat: number;
   hidden: boolean;
+  muted: boolean;
   react: (mood: MascotMood, line?: string | null) => void;
   setHidden: (hidden: boolean) => void;
+  setMuted: (muted: boolean) => void;
 };
+
+const MUTE_KEY = 'dragonmeet:gaston-muted';
+const readMuted = () => { try { return localStorage.getItem(MUTE_KEY) === '1'; } catch { return false; } };
 
 export const useMascot = create<MascotState>(set => ({
   mood: 'idle',
   line: null,
   beat: 0,
   hidden: false,
+  muted: readMuted(),
   react: (mood, line = null) => set(s => ({ mood, line, beat: s.beat + 1 })),
   setHidden: hidden => set({ hidden }),
+  setMuted: muted => {
+    try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch { /* private mode: keep it for this session only */ }
+    set({ muted });
+  },
 }));
 
 /** Success messages from the store, translated into a reaction (and what Gastón says). */

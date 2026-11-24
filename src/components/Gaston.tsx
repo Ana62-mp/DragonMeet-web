@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { X } from 'lucide-react';
+import { Volume2, VolumeX, X } from 'lucide-react';
+import { playMascotSound, primeAudio } from '../lib/gastonSounds';
 import { useMascot, type MascotMood } from '../lib/mascot';
 
 /**
@@ -125,7 +126,7 @@ const LINES: Record<MascotMood, string[]> = {
 
 export default function Gaston() {
   const host = useRef<HTMLButtonElement>(null);
-  const { mood, line, beat, hidden, react, setHidden } = useMascot();
+  const { mood, line, beat, hidden, muted, react, setHidden, setMuted } = useMascot();
   const [dismissed, setDismissed] = useState(0);
   const moodRef = useRef<{ mood: MascotMood; since: number }>({ mood: 'idle', since: 0 });
   // Speech bubble for each reaction; it hides itself after a few seconds.
@@ -134,14 +135,16 @@ export default function Gaston() {
   useEffect(() => {
     if (!beat) return;
     moodRef.current = { mood, since: performance.now() };
+    if (!muted && !hidden) playMascotSound(mood);
     const t = setTimeout(() => setDismissed(beat), 2800);
     return () => clearTimeout(t);
-  }, [beat, mood]);
+  }, [beat, mood]); // eslint-disable-line react-hooks/exhaustive-deps -- sound plays once per reaction, not when muting
 
   // Falls asleep after a while without interaction; any input wakes him up.
   useEffect(() => {
     let timer = 0;
     const arm = () => {
+      primeAudio();
       clearTimeout(timer);
       if (moodRef.current.mood === 'sleep') react('wave', '¡Ya desperté!');
       timer = window.setTimeout(() => react('sleep'), 45000);
@@ -266,6 +269,7 @@ export default function Gaston() {
       {mood === 'sleep' && <span className="gaston-zzz" aria-hidden="true">z<b>z</b><i>z</i></span>}
       <button className="gaston-stage" ref={host} onClick={() => react(mood === 'sleep' ? 'wave' : 'happy', mood === 'sleep' ? '¡Ya desperté!' : null)} aria-label="Gastón, la mascota. Tócalo para que salte." />
       <button className="gaston-close" onClick={() => setHidden(true)} aria-label="Ocultar a Gastón"><X size={12} /></button>
+      <button className="gaston-close gaston-mute" onClick={() => setMuted(!muted)} aria-label={muted ? 'Activar sonidos de Gastón' : 'Silenciar a Gastón'} aria-pressed={muted}>{muted ? <VolumeX size={12} /> : <Volume2 size={12} />}</button>
     </div>
   );
 }
